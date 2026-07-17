@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Golf Partner</title>
+  <style>
+    :root {
+      --primary: #0F5132;
+      --primary-light: #198754;
+      --accent: #F59E0B;
+      --text: #1A1F1A;
+      --text-secondary: #5A625A;
+      --background: #F8FAF8;
+      --surface: #FFFFFF;
+      --border: #E1E7E1;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: linear-gradient(180deg, var(--background) 0%, #E8F1EA 100%);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .wrap {
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 24px;
+      text-align: center;
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: 20px;
+      padding: 40px 32px;
+      box-shadow: 0 8px 24px rgba(15, 81, 50, 0.08);
+      max-width: 420px;
+      width: 100%;
+    }
+
+    .emoji {
+      font-size: 72px;
+      margin-bottom: 8px;
+      line-height: 1;
+    }
+
+    .check {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: var(--primary-light);
+      color: white;
+      font-size: 40px;
+      font-weight: 800;
+      margin-bottom: 16px;
+      animation: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes pop {
+      0%   { transform: scale(0); opacity: 0; }
+      60%  { transform: scale(1.15); opacity: 1; }
+      100% { transform: scale(1); }
+    }
+
+    h1 {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--primary);
+      margin-bottom: 12px;
+      letter-spacing: -0.5px;
+    }
+
+    p.subtitle {
+      font-size: 16px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+
+    .next-steps {
+      background: var(--background);
+      border-radius: 12px;
+      padding: 16px 20px;
+      text-align: left;
+      margin-bottom: 20px;
+    }
+
+    .next-steps h2 {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+
+    .next-steps ol {
+      padding-left: 20px;
+      font-size: 14px;
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    .footer-note {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 20px;
+      line-height: 1.5;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 32px;
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .error {
+      color: #DC3545;
+      font-weight: 600;
+    }
+
+    .error-check {
+      background: #DC3545;
+    }
+
+    #status-loading {
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin-top: 8px;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <!-- Loading state -->
+      <div id="loading">
+        <div class="emoji">⛳</div>
+        <h1>Confirming your email…</h1>
+        <p id="status-loading"><span class="spinner"></span>Just a sec</p>
+      </div>
+
+      <!-- Success state -->
+      <div id="success" style="display:none;">
+        <div class="check">✓</div>
+        <h1>Email confirmed!</h1>
+        <p class="subtitle">You're all set. Head back to the Golf Partner app to sign in.</p>
+
+        <div class="next-steps">
+          <h2>Next steps</h2>
+          <ol>
+            <li>Open the Golf Partner app on your phone</li>
+            <li>Tap <strong>Sign In</strong></li>
+            <li>Use the same email + password you just registered with</li>
+          </ol>
+        </div>
+
+        <p class="footer-note">You can safely close this tab. 🏌️</p>
+      </div>
+
+      <!-- Error state -->
+      <div id="error-view" style="display:none;">
+        <div class="check error-check">!</div>
+        <h1 class="error">Something went wrong</h1>
+        <p class="subtitle" id="error-message">The confirmation link may have expired or already been used.</p>
+
+        <div class="next-steps">
+          <h2>What to try</h2>
+          <ol>
+            <li>If you already confirmed, just open the app and sign in</li>
+            <li>Otherwise, request a new confirmation email from the app</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="brand">⛳ Golf Partner</div>
+    </div>
+  </div>
+
+  <script>
+    // Supabase sends the token as a URL hash fragment when using implicit flow,
+    // e.g. #access_token=...&refresh_token=...&type=signup
+    // For "confirm signup" email, no client action is needed — Supabase already
+    // marked the email confirmed server-side when the link was clicked.
+    // We just show the success state.
+
+    (function () {
+      const hash = window.location.hash || '';
+      const search = window.location.search || '';
+
+      // Look for an error param first (Supabase puts errors in URL fragment)
+      const hashParams = new URLSearchParams(hash.replace(/^#/, ''));
+      const searchParams = new URLSearchParams(search);
+      const errorDesc =
+        hashParams.get('error_description') ||
+        searchParams.get('error_description') ||
+        hashParams.get('error') ||
+        searchParams.get('error');
+
+      const loading = document.getElementById('loading');
+      const success = document.getElementById('success');
+      const errorView = document.getElementById('error-view');
+
+      // Small delay so the loading state is visible for a beat (feels intentional)
+      setTimeout(function () {
+        loading.style.display = 'none';
+        if (errorDesc) {
+          document.getElementById('error-message').textContent = decodeURIComponent(errorDesc);
+          errorView.style.display = 'block';
+        } else {
+          success.style.display = 'block';
+        }
+      }, 600);
+    })();
+  </script>
+</body>
+</html>
