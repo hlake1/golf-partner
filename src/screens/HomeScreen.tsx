@@ -16,6 +16,7 @@ import { colors } from '../theme/colors';
 import { useNearbyPlayers, type NearbyPlayer } from '../hooks/useNearbyPlayers';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import PlayerProfileScreen from './PlayerProfileScreen';
 
 const RADIUS_OPTIONS = [5, 10, 25, 50];
 
@@ -30,11 +31,21 @@ export default function HomeScreen() {
   const [clubFilter, setClubFilter] = useState<Club | null>(null);
   const [clubModalOpen, setClubModalOpen] = useState(false);
   const [allClubs, setAllClubs] = useState<Club[]>([]);
+  const [openProfileId, setOpenProfileId] = useState<string | null>(null);
 
   const { players, loading, error, refresh } = useNearbyPlayers({
     radiusMiles,
     clubFilter: clubFilter?.id ?? null,
   });
+
+  if (openProfileId) {
+    return (
+      <PlayerProfileScreen
+        userId={openProfileId}
+        onBack={() => setOpenProfileId(null)}
+      />
+    );
+  }
 
   // Load clubs for the filter modal (once)
   useEffect(() => {
@@ -143,7 +154,11 @@ export default function HomeScreen() {
         ) : (
           <View style={styles.playerList}>
             {players.map((player) => (
-              <PlayerCard key={player.id} player={player} />
+              <PlayerCard
+                key={player.id}
+                player={player}
+                onOpenProfile={() => setOpenProfileId(player.id)}
+              />
             ))}
           </View>
         )}
@@ -199,7 +214,13 @@ export default function HomeScreen() {
   );
 }
 
-function PlayerCard({ player }: { player: NearbyPlayer }) {
+function PlayerCard({
+  player,
+  onOpenProfile,
+}: {
+  player: NearbyPlayer;
+  onOpenProfile: () => void;
+}) {
   const { user } = useAuth();
   const [inviting, setInviting] = useState(false);
 
@@ -277,7 +298,7 @@ function PlayerCard({ player }: { player: NearbyPlayer }) {
   const initial = player.full_name?.charAt(0)?.toUpperCase() ?? '?';
 
   return (
-    <View style={styles.card}>
+    <TouchableOpacity style={styles.card} activeOpacity={0.7} onPress={onOpenProfile}>
       <View style={styles.avatarWrap}>
         {player.photo_url ? (
           <Image source={{ uri: player.photo_url }} style={styles.avatarImage} />
@@ -339,7 +360,7 @@ function PlayerCard({ player }: { player: NearbyPlayer }) {
           )}
         </TouchableOpacity>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 

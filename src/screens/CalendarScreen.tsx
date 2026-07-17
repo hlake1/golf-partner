@@ -9,6 +9,10 @@ import {
   RefreshControl,
   Alert,
   Image,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
@@ -29,6 +33,10 @@ export default function CalendarScreen() {
   const [requestingId, setRequestingId] = useState<string | null>(null);
   const [actioningId, setActioningId] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>('schedule');
+  const [messageModal, setMessageModal] = useState<{ round: RoundListItem | null; text: string }>({
+    round: null,
+    text: '',
+  });
 
   const refreshAll = () => {
     refresh();
@@ -85,15 +93,22 @@ export default function CalendarScreen() {
     );
   }
 
-  async function requestToJoin(round: RoundListItem) {
-    if (!user) return;
+  function openJoinModal(round: RoundListItem) {
+    setMessageModal({ round, text: '' });
+  }
+
+  async function submitJoinRequest() {
+    const round = messageModal.round;
+    if (!user || !round) return;
     setRequestingId(round.id);
     const { error } = await supabase.from('join_requests').insert({
       round_id: round.id,
       requester_id: user.id,
       status: 'pending',
+      message: messageModal.text.trim() || null,
     });
     setRequestingId(null);
+    setMessageModal({ round: null, text: '' });
     if (error) {
       Alert.alert('Could not send request', error.message);
       return;
@@ -214,7 +229,7 @@ export default function CalendarScreen() {
                 <RoundCard
                   key={round.id}
                   round={round}
-                  onRequestToJoin={() => requestToJoin(round)}
+                  onRequestToJoin={() => openJoinModal(round)}
                   requesting={requestingId === round.id}
                 />
               ))
@@ -223,6 +238,55 @@ export default function CalendarScreen() {
         )}
       </ScrollView>
       )}
+
+      {/* Join request message modal */}
+      <Modal
+        visible={!!messageModal.round}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMessageModal({ round: null, text: '' })}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalBackdrop}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Request to join</Text>
+            <Text style={styles.modalSubtitle}>
+              Add a short message so {messageModal.round?.host?.full_name ?? 'the host'} knows a bit about you (optional).
+            </Text>
+            <TextInput
+              style={styles.modalInput}
+              value={messageModal.text}
+              onChangeText={(t) => setMessageModal((m) => ({ ...m, text: t }))}
+              placeholder="Hey! Handicap 14, up for a friendly round…"
+              placeholderTextColor={colors.textMuted}
+              multiline
+              maxLength={280}
+              autoFocus
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancel}
+                onPress={() => setMessageModal({ round: null, text: '' })}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalSubmit, !!requestingId && styles.buttonDisabled]}
+                onPress={submitJoinRequest}
+                disabled={!!requestingId}
+              >
+                {requestingId ? (
+                  <ActivityIndicator color={colors.white} size="small" />
+                ) : (
+                  <Text style={styles.modalSubmitText}>Send Request</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -632,4 +696,60 @@ const styles = StyleSheet.create({
   },
   segmentText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
   segmentTextActive: { color: colors.primary },
+  // Join modal
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    width: '100%',
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    padding: 24,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: colors.text,
+    marginBottom: 8,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  modalInput: {
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 15,
+    color: colors.text,
+    minHeight: 100,
+    textAlignVertical: 'top',
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 16,
+  },
+  modalActions: { flexDirection: 'row', gap: 10 },
+  modalCancel: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  modalCancelText: { fontSize: 14, fontWeight: '600', color: colors.text },
+  modalSubmit: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+  },
+  modalSubmitText: { fontSize: 14, fontWeight: '700', color: colors.white },
 });
