@@ -17,6 +17,9 @@ import { usePendingRequests, type PendingRequest } from '../hooks/usePendingRequ
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import CreateRoundScreen from './CreateRoundScreen';
+import MyScheduleScreen from './MyScheduleScreen';
+
+type Mode = 'schedule' | 'discover';
 
 export default function CalendarScreen() {
   const { user } = useAuth();
@@ -25,6 +28,7 @@ export default function CalendarScreen() {
   const [creating, setCreating] = useState(false);
   const [requestingId, setRequestingId] = useState<string | null>(null);
   const [actioningId, setActioningId] = useState<string | null>(null);
+  const [mode, setMode] = useState<Mode>('schedule');
 
   const refreshAll = () => {
     refresh();
@@ -124,6 +128,29 @@ export default function CalendarScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      {/* Segment control at the very top */}
+      <View style={styles.segmentBar}>
+        <TouchableOpacity
+          style={[styles.segment, mode === 'schedule' && styles.segmentActive]}
+          onPress={() => setMode('schedule')}
+        >
+          <Text style={[styles.segmentText, mode === 'schedule' && styles.segmentTextActive]}>
+            My Schedule
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.segment, mode === 'discover' && styles.segmentActive]}
+          onPress={() => setMode('discover')}
+        >
+          <Text style={[styles.segmentText, mode === 'discover' && styles.segmentTextActive]}>
+            Discover
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {mode === 'schedule' ? (
+        <MyScheduleScreen />
+      ) : (
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={refreshAll} />}
@@ -195,6 +222,7 @@ export default function CalendarScreen() {
           </>
         )}
       </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -578,4 +606,30 @@ const styles = StyleSheet.create({
   },
   acceptButtonText: { fontSize: 14, fontWeight: '700', color: colors.white },
   buttonDisabled: { opacity: 0.6 },
+  // Segment control
+  segmentBar: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 4,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: 12,
+    padding: 4,
+  },
+  segment: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  segmentActive: {
+    backgroundColor: colors.surface,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  segmentText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
+  segmentTextActive: { color: colors.primary },
 });
