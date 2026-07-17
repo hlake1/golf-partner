@@ -8,10 +8,12 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { useRounds, type RoundListItem } from '../hooks/useRounds';
+import { usePendingRequests, type PendingRequest } from '../hooks/usePendingRequests';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import CreateRoundScreen from './CreateRoundScreen';
@@ -19,8 +21,53 @@ import CreateRoundScreen from './CreateRoundScreen';
 export default function CalendarScreen() {
   const { user } = useAuth();
   const { rounds, loading, refresh } = useRounds();
+  const { requests, refresh: refreshRequests } = usePendingRequests();
   const [creating, setCreating] = useState(false);
   const [requestingId, setRequestingId] = useState<string | null>(null);
+  const [actioningId, setActioningId] = useState<string | null>(null);
+
+  const refreshAll = () => {
+    refresh();
+    refreshRequests();
+  };
+
+  async function acceptRequest(req: PendingRequest) {
+    setActioningId(req.id);
+    const { error } = await supabase.rpc('accept_join_request', { request_id: req.id });
+    setActioningId(null);
+    if (error) {
+      Alert.alert('Could not accept', error.message);
+      return;
+    }
+    refreshAll();
+  }
+
+  async function declineRequest(req: PendingRequest) {
+    Alert.alert(
+      `Decline ${req.requester?.full_name ?? 'this request'}?`,
+      'They\'ll be notified. You can\'t undo this.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Decline',
+          style: 'destructive',
+          onPress: async () => {
+            setActioningId(req.id);
+            const { error } = await supabase.rpc('decline_join_request', {
+              request_id: req.id,
+              decline_reason: null,
+            });
+            setActioningId(null);
+            if (error) {
+              Alert.alert('Could not decline', error.message);
+              return;
+            }
+            refreshAll();
+          },
+        },
+      ]
+    );
+  }
 
   if (creating) {
     return (
@@ -28,7 +75,7 @@ export default function CalendarScreen() {
         onCancel={() => setCreating(false)}
         onCreated={() => {
           setCreating(false);
-          refresh();
+          refreshAll();
         }}
       />
     );
@@ -51,7 +98,7 @@ export default function CalendarScreen() {
       'Request sent!',
       `${round.host?.full_name ?? 'The host'} will get a notification and can accept or decline.`
     );
-    refresh();
+    refreshAll();
   }
 
   async function cancelRound(round: RoundListItem) {
@@ -66,7 +113,7 @@ export default function CalendarScreen() {
             .update({ status: 'cancelled' })
             .eq('id', round.id);
           if (error) Alert.alert('Failed', error.message);
-          else refresh();
+          else refreshAll();
         },
       },
     ]);
@@ -79,7 +126,7 @@ export default function CalendarScreen() {
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} />}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={refreshAll} />}
       >
         <View style={styles.header}>
           <Text style={styles.title}>Upcoming Rounds</Text>
@@ -91,6 +138,23 @@ export default function CalendarScreen() {
         <TouchableOpacity style={styles.createButton} onPress={() => setCreating(true)}>
           <Text style={styles.createButtonText}>+ Post a Round</Text>
         </TouchableOpacity>
+
+        {requests.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>
+              ✨ Requests to review ({requests.length})
+            </Text>
+            {requests.map((req) => (
+              <RequestCard
+                key={req.id}
+                request={req}
+                onAccept={() => acceptRequest(req)}
+                onDecline={() => declineRequest(req)}
+                busy={actioningId === req.id}
+              />
+            ))}
+          </>
+        )}
 
         {loading && rounds.length === 0 ? (
           <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
@@ -229,6 +293,97 @@ function RoundCard({
   );
 }
 
+function RequestCard({
+  request,
+  onAccept,
+  onDecline,
+  busy,
+}: {
+  request: PendingRequest;
+  onAccept: () => void;
+  onDecline: () => void;
+  busy: boolean;
+}) {
+  const req = request.requester;
+  const round = request.round;
+  const initial = req?.full_name?.charAt(0)?.toUpperCase() ?? '?';
+  const dateText = round
+    ? new Date(round.scheduled_for).toLocaleDateString('en-GB', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+      })
+    : '';
+  const timeText = round
+    ? new Date(round.scheduled_for).toLocaleTimeString('en-GB', {
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : '';
+  const styleTag = req?.playing_style === 'competitive' ? '🏆 Competitive' : '😌 Casual';
+
+  return (
+    <View style={styles.requestCard}>
+      <View style={styles.requestHeader}>
+        {req?.photo_url ? (
+          <Image source={{ uri: req.photo_url }} style={styles.requestAvatar} />
+        ) : (
+          <View style={styles.requestAvatarPlaceholder}>
+            <Text style={styles.requestAvatarInitial}>{initial}</Text>
+          </View>
+        )}
+        <View style={{ flex: 1 }}>
+          <Text style={styles.requestName}>{req?.full_name ?? 'Unknown player'}</Text>
+          <Text style={styles.requestMeta}>
+            {req?.age !== null && req?.age !== undefined ? `Age ${req.age}` : ''}
+            {req?.handicap !== null && req?.handicap !== undefined ? ` · HCP ${req.handicap}` : ''}
+          </Text>
+          {req?.occupation && (
+            <Text style={styles.requestOccupation}>💼 {req.occupation}</Text>
+          )}
+          <View style={styles.requestTagRow}>
+            <View style={styles.requestTag}>
+              <Text style={styles.requestTagText}>{styleTag}</Text>
+            </View>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.requestRoundInfo}>
+        <Text style={styles.requestRoundLabel}>Wants to join:</Text>
+        <Text style={styles.requestRoundText}>
+          ⛳ {round?.club?.name ?? 'Round'} · {dateText} · {timeText}
+        </Text>
+      </View>
+
+      {request.message && (
+        <Text style={styles.requestMessage}>“{request.message}”</Text>
+      )}
+
+      <View style={styles.requestActions}>
+        <TouchableOpacity
+          style={[styles.declineButton, busy && styles.buttonDisabled]}
+          onPress={onDecline}
+          disabled={busy}
+        >
+          <Text style={styles.declineButtonText}>Decline</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.acceptButton, busy && styles.buttonDisabled]}
+          onPress={onAccept}
+          disabled={busy}
+        >
+          {busy ? (
+            <ActivityIndicator color={colors.white} size="small" />
+          ) : (
+            <Text style={styles.acceptButtonText}>Accept</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scrollContent: { paddingBottom: 40 },
@@ -336,4 +491,91 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   declinedBadgeText: { fontSize: 12, fontWeight: '700', color: '#991B1B' },
+  // Request card
+  requestCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: colors.accent,
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  requestHeader: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  requestAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+  },
+  requestAvatarPlaceholder: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  requestAvatarInitial: { fontSize: 22, fontWeight: '700', color: colors.white },
+  requestName: { fontSize: 16, fontWeight: '700', color: colors.text },
+  requestMeta: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
+  requestOccupation: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+  requestTagRow: { flexDirection: 'row', gap: 6, marginTop: 6 },
+  requestTag: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
+    backgroundColor: '#FEF3C7',
+  },
+  requestTagText: { fontSize: 11, fontWeight: '600', color: colors.text },
+  requestRoundInfo: {
+    backgroundColor: '#FFF8E7',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 10,
+  },
+  requestRoundLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  requestRoundText: { fontSize: 13, fontWeight: '600', color: colors.text },
+  requestMessage: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+    marginBottom: 10,
+    paddingHorizontal: 4,
+  },
+  requestActions: { flexDirection: 'row', gap: 10 },
+  declineButton: {
+    flex: 1,
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  declineButtonText: { fontSize: 14, fontWeight: '700', color: colors.text },
+  acceptButton: {
+    flex: 1,
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  acceptButtonText: { fontSize: 14, fontWeight: '700', color: colors.white },
+  buttonDisabled: { opacity: 0.6 },
 });
