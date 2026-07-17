@@ -1,16 +1,17 @@
 {
   "expo": {
-    "name": "golf-partner",
-    "slug": "golf-partner",
+    "name": "Scramble",
+    "slug": "scramble",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "description": "Scramble - find someone to play golf with. Discover local players, plan rounds, meet at the course.",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0F5132"
     },
     "ios": {
       "supportsTablet": true

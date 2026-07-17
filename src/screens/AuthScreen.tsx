@@ -73,7 +73,7 @@ export default function AuthScreen() {
         >
           <View style={styles.hero}>
             <Text style={styles.heroEmoji}>⛳</Text>
-            <Text style={styles.heroTitle}>Golf Partner</Text>
+            <Text style={styles.heroTitle}>Scramble</Text>
             <Text style={styles.heroSubtitle}>
               Find someone to play with, wherever you are
             </Text>
