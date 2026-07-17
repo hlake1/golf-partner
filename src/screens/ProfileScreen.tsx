@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
+import { useAuth } from '../contexts/AuthContext';
 
 // Mock current user - will come from auth/Supabase later
 type PlayingStyle = 'competitive' | 'casual';
@@ -15,18 +16,33 @@ interface CurrentUser {
   occupation: string;
   photoUrl: string | null;
 }
-const CURRENT_USER: CurrentUser = {
-  name: 'Herbie Lake',
+// Placeholder profile shown until we build the real onboarding form.
+// Once /screens/OnboardingScreen.tsx is built, this data will come from Supabase.
+const PLACEHOLDER_PROFILE: CurrentUser = {
+  name: 'New Golfer',
   age: 20,
-  handicap: 14,
-  clubs: ['Frilford Heath'],
+  handicap: 18,
+  clubs: [],
   playingStyle: 'casual',
   upForDrink: true,
-  occupation: 'Restaurant Manager',
+  occupation: 'Not set yet',
   photoUrl: null,
 };
 
 export default function ProfileScreen() {
+  const { signOut, user } = useAuth();
+  const CURRENT_USER: CurrentUser = {
+    ...PLACEHOLDER_PROFILE,
+    name: (user?.user_metadata?.full_name as string) || user?.email?.split('@')[0] || 'Golfer',
+  };
+
+  function handleSignOut() {
+    Alert.alert('Sign out?', 'You can sign back in anytime.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Sign Out', style: 'destructive', onPress: () => signOut() },
+    ]);
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -87,6 +103,14 @@ export default function ProfileScreen() {
         <TouchableOpacity style={styles.editButton}>
           <Text style={styles.editButtonText}>Edit Profile</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+          <Text style={styles.signOutText}>Sign Out</Text>
+        </TouchableOpacity>
+
+        {user?.email && (
+          <Text style={styles.emailFootnote}>Signed in as {user.email}</Text>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -267,5 +291,22 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontWeight: '700',
     fontSize: 15,
+  },
+  signOutButton: {
+    marginHorizontal: 20,
+    marginTop: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  signOutText: {
+    color: colors.danger,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  emailFootnote: {
+    textAlign: 'center',
+    color: colors.textMuted,
+    fontSize: 12,
+    marginTop: 8,
   },
 });
