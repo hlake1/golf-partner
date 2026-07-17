@@ -1,40 +1,48 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+  Image,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { useAuth } from '../contexts/AuthContext';
+import { useProfile } from '../hooks/useProfile';
+import { supabase } from '../lib/supabase';
 
-// Mock current user - will come from auth/Supabase later
-type PlayingStyle = 'competitive' | 'casual';
-interface CurrentUser {
-  name: string;
-  age: number;
-  handicap: number;
-  clubs: string[];
-  playingStyle: PlayingStyle;
-  upForDrink: boolean;
-  occupation: string;
-  photoUrl: string | null;
+interface ClubRow {
+  club_id: string;
+  clubs: { id: string; name: string } | null;
 }
-// Placeholder profile shown until we build the real onboarding form.
-// Once /screens/OnboardingScreen.tsx is built, this data will come from Supabase.
-const PLACEHOLDER_PROFILE: CurrentUser = {
-  name: 'New Golfer',
-  age: 20,
-  handicap: 18,
-  clubs: [],
-  playingStyle: 'casual',
-  upForDrink: true,
-  occupation: 'Not set yet',
-  photoUrl: null,
-};
 
 export default function ProfileScreen() {
   const { signOut, user } = useAuth();
-  const CURRENT_USER: CurrentUser = {
-    ...PLACEHOLDER_PROFILE,
-    name: (user?.user_metadata?.full_name as string) || user?.email?.split('@')[0] || 'Golfer',
-  };
+  const { profile, loading, refresh } = useProfile();
+  const [clubs, setClubs] = useState<{ id: string; name: string }[]>([]);
+  const [clubsLoading, setClubsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      setClubsLoading(true);
+      const { data, error } = await supabase
+        .from('profile_clubs')
+        .select('club_id, clubs(id, name)')
+        .eq('profile_id', user.id);
+      if (!error && data) {
+        const cleaned = (data as unknown as ClubRow[])
+          .map((row) => row.clubs)
+          .filter((c): c is { id: string; name: string } => !!c);
+        setClubs(cleaned);
+      }
+      setClubsLoading(false);
+    })();
+  }, [user, profile?.id]);
 
   function handleSignOut() {
     Alert.alert('Sign out?', 'You can sign back in anytime.', [
@@ -43,65 +51,104 @@ export default function ProfileScreen() {
     ]);
   }
 
+  if (loading || !profile) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const initial = profile.full_name?.charAt(0)?.toUpperCase() ?? '⛳';
+  const styleLabel = profile.playing_style === 'competitive' ? '🏆' : '😌';
+  const drinkLabel = profile.up_for_drink_afterwards ? '✅' : '❌';
+
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={undefined}
+      >
         {/* Photo + Name header */}
         <View style={styles.header}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarInitial}>
-              {CURRENT_USER.name.charAt(0)}
-            </Text>
-          </View>
-          <Text style={styles.name}>{CURRENT_USER.name}</Text>
-          <Text style={styles.age}>Age {CURRENT_USER.age}</Text>
+          {profile.photo_url ? (
+            <Image source={{ uri: profile.photo_url }} style={styles.avatarImage} />
+          ) : (
+            <View style={styles.avatar}>
+              <Text style={styles.avatarInitial}>{initial}</Text>
+            </View>
+          )}
+          <Text style={styles.name}>{profile.full_name}</Text>
+          {profile.age !== null && (
+            <Text style={styles.age}>Age {profile.age}</Text>
+          )}
 
-          <TouchableOpacity style={styles.editPhotoButton}>
-            <Text style={styles.editPhotoText}>📷 Change Photo</Text>
+          <TouchableOpacity style={styles.editPhotoButton} onPress={refresh}>
+            <Text style={styles.editPhotoText}>↻ Refresh</Text>
           </TouchableOpacity>
         </View>
 
         {/* Stats row */}
         <View style={styles.statsRow}>
-          <StatCard label="Handicap" value={String(CURRENT_USER.handicap)} />
-          <StatCard label="Style" value={CURRENT_USER.playingStyle === 'competitive' ? '🏆' : '😌'} />
-          <StatCard label="Drinks After" value={CURRENT_USER.upForDrink ? '✅' : '❌'} />
+          <StatCard
+            label="Handicap"
+            value={profile.handicap !== null ? String(profile.handicap) : '—'}
+          />
+          <StatCard label="Style" value={styleLabel} />
+          <StatCard label="Drinks After" value={drinkLabel} />
         </View>
 
-        {/* Sections */}
+        {/* Club Memberships */}
         <Section title="Club Memberships">
-          {CURRENT_USER.clubs.map((club) => (
-            <View key={club} style={styles.clubChip}>
-              <Text style={styles.clubChipText}>⛳ {club}</Text>
+          {clubsLoading ? (
+            <ActivityIndicator color={colors.primary} />
+          ) : clubs.length === 0 ? (
+            <Text style={styles.emptyText}>No clubs added yet</Text>
+          ) : (
+            <View style={styles.clubChipsRow}>
+              {clubs.map((club) => (
+                <View key={club.id} style={styles.clubChip}>
+                  <Text style={styles.clubChipText}>⛳ {club.name}</Text>
+                </View>
+              ))}
             </View>
-          ))}
-          <TouchableOpacity style={styles.addClubButton}>
-            <Text style={styles.addClubText}>+ Add Club</Text>
-          </TouchableOpacity>
+          )}
         </Section>
 
+        {/* Occupation */}
         <Section title="Occupation">
-          <Text style={styles.plainText}>
-            💼 {CURRENT_USER.occupation}
-          </Text>
-          <Text style={styles.helperText}>
-            Optional - helps with networking with fellow golfers
-          </Text>
+          {profile.occupation ? (
+            <>
+              <Text style={styles.plainText}>💼 {profile.occupation}</Text>
+              <Text style={styles.helperText}>
+                Helps with networking with fellow golfers
+              </Text>
+            </>
+          ) : (
+            <Text style={styles.emptyText}>Not set (optional)</Text>
+          )}
         </Section>
 
+        {/* Playing Preferences */}
         <Section title="Playing Preferences">
           <PreferenceRow
             label="Playing Style"
-            value={CURRENT_USER.playingStyle === 'competitive' ? 'Competitive' : 'Casual'}
+            value={profile.playing_style === 'competitive' ? 'Competitive' : 'Casual'}
           />
           <PreferenceRow
             label="Drinks Afterwards"
-            value={CURRENT_USER.upForDrink ? 'Yes' : 'No'}
+            value={profile.up_for_drink_afterwards ? 'Yes' : 'No'}
+          />
+          <PreferenceRow
+            label="Search Radius"
+            value={`${profile.search_radius_miles} miles`}
           />
         </Section>
 
         <TouchableOpacity style={styles.editButton}>
-          <Text style={styles.editButtonText}>Edit Profile</Text>
+          <Text style={styles.editButtonText}>Edit Profile (coming soon)</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
@@ -151,6 +198,11 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 40,
   },
+  loadingWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   header: {
     alignItems: 'center',
     paddingVertical: 24,
@@ -163,6 +215,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 12,
+  },
+  avatarImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     marginBottom: 12,
   },
   avatarInitial: {
@@ -235,8 +293,12 @@ const styles = StyleSheet.create({
     padding: 14,
     gap: 8,
   },
+  clubChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
   clubChip: {
-    alignSelf: 'flex-start',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -247,14 +309,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.white,
   },
-  addClubButton: {
-    marginTop: 4,
-  },
-  addClubText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.primary,
-  },
   plainText: {
     fontSize: 14,
     color: colors.text,
@@ -263,6 +317,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textMuted,
     marginTop: 4,
+    fontStyle: 'italic',
+  },
+  emptyText: {
+    fontSize: 13,
+    color: colors.textMuted,
     fontStyle: 'italic',
   },
   preferenceRow: {
@@ -282,15 +341,15 @@ const styles = StyleSheet.create({
   editButton: {
     marginHorizontal: 20,
     marginTop: 24,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.surfaceElevated,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
   },
   editButtonText: {
-    color: colors.white,
-    fontWeight: '700',
-    fontSize: 15,
+    color: colors.textSecondary,
+    fontWeight: '600',
+    fontSize: 14,
   },
   signOutButton: {
     marginHorizontal: 20,
