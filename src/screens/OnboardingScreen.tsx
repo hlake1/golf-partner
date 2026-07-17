@@ -16,6 +16,7 @@ import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import { colors } from '../theme/colors';
 import { supabase } from '../lib/supabase';
+import { uploadProfilePhoto } from '../lib/uploadProfilePhoto';
 import { useAuth } from '../contexts/AuthContext';
 import type { PlayingStyle } from '../hooks/useProfile';
 
@@ -152,13 +153,10 @@ export default function OnboardingScreen({ onDone }: Props) {
     setError(null);
 
     try {
-      // 1. Upload photo (if provided)
+      // 1. Upload photo (if provided) to Supabase Storage
       let photoUrl: string | null = null;
       if (photoUri) {
-        // We'll skip photo storage for now (needs a Storage bucket setup).
-        // For MVP, we just store the local URI as a placeholder.
-        // TODO: set up Supabase Storage bucket + upload.
-        photoUrl = null;
+        photoUrl = await uploadProfilePhoto(photoUri, user.id);
       }
 
       // 2. Update the profile row

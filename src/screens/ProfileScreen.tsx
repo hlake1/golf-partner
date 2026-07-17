@@ -10,10 +10,12 @@ import {
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 import { colors } from '../theme/colors';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../hooks/useProfile';
 import { supabase } from '../lib/supabase';
+import { uploadProfilePhoto } from '../lib/uploadProfilePhoto';
 
 interface ClubRow {
   club_id: string;
@@ -25,6 +27,38 @@ export default function ProfileScreen() {
   const { profile, loading, refresh } = useProfile();
   const [clubs, setClubs] = useState<{ id: string; name: string }[]>([]);
   const [clubsLoading, setClubsLoading] = useState(true);
+  const [photoUpdating, setPhotoUpdating] = useState(false);
+
+  async function handleChangePhoto() {
+    if (!user) return;
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('Permission needed', 'Allow photo library access to add a profile photo.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (result.canceled || !result.assets[0]) return;
+
+    setPhotoUpdating(true);
+    try {
+      const url = await uploadProfilePhoto(result.assets[0].uri, user.id);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ photo_url: url })
+        .eq('id', user.id);
+      if (error) throw new Error(error.message);
+      await refresh();
+    } catch (e: any) {
+      Alert.alert('Upload failed', e.message ?? 'Something went wrong.');
+    } finally {
+      setPhotoUpdating(false);
+    }
+  }
 
   useEffect(() => {
     if (!user) return;
@@ -85,8 +119,18 @@ export default function ProfileScreen() {
             <Text style={styles.age}>Age {profile.age}</Text>
           )}
 
-          <TouchableOpacity style={styles.editPhotoButton} onPress={refresh}>
-            <Text style={styles.editPhotoText}>↻ Refresh</Text>
+          <TouchableOpacity
+            style={styles.editPhotoButton}
+            onPress={handleChangePhoto}
+            disabled={photoUpdating}
+          >
+            {photoUpdating ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Text style={styles.editPhotoText}>
+                📷 {profile.photo_url ? 'Change Photo' : 'Add Photo'}
+              </Text>
+            )}
           </TouchableOpacity>
         </View>
 
