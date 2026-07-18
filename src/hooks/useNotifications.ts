@@ -66,12 +66,17 @@ export function useNotifications() {
     load();
   }, [load]);
 
-  // Realtime subscription: prepend inserts, patch updates
+  // Realtime subscription: prepend inserts, patch updates.
+  // We include a random suffix in the channel name so multiple useNotifications()
+  // callers (e.g. the header bell + the notifications screen) don't collide on
+  // the same channel key - which would otherwise cause:
+  //   "cannot add postgres_changes callbacks for realtime:notifications:... after subscribe()"
   useEffect(() => {
     if (!user) return;
 
+    const channelName = `notifications:${user.id}:${Math.random().toString(36).slice(2, 10)}`;
     const channel = supabase
-      .channel(`notifications:${user.id}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
