@@ -16,6 +16,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../hooks/useProfile';
 import { supabase } from '../lib/supabase';
 import { uploadProfilePhoto } from '../lib/uploadProfilePhoto';
+import EditProfileScreen from './EditProfileScreen';
 
 interface ClubRow {
   club_id: string;
@@ -28,6 +29,10 @@ export default function ProfileScreen() {
   const [clubs, setClubs] = useState<{ id: string; name: string }[]>([]);
   const [clubsLoading, setClubsLoading] = useState(true);
   const [photoUpdating, setPhotoUpdating] = useState(false);
+  const [editing, setEditing] = useState(false);
+
+  // Refresh clubs after editing (so club chips reflect the changes).
+  const [clubsVersion, setClubsVersion] = useState(0);
 
   async function handleChangePhoto() {
     if (!user) return;
@@ -76,7 +81,7 @@ export default function ProfileScreen() {
       }
       setClubsLoading(false);
     })();
-  }, [user, profile?.id]);
+  }, [user, profile?.id, clubsVersion]);
 
   function handleSignOut() {
     Alert.alert('Sign out?', 'You can sign back in anytime.', [
@@ -92,6 +97,20 @@ export default function ProfileScreen() {
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
       </SafeAreaView>
+    );
+  }
+
+  // Full-screen edit overlay.
+  if (editing) {
+    return (
+      <EditProfileScreen
+        onCancel={() => setEditing(false)}
+        onSaved={async () => {
+          setEditing(false);
+          await refresh();
+          setClubsVersion((v) => v + 1);
+        }}
+      />
     );
   }
 
@@ -191,8 +210,8 @@ export default function ProfileScreen() {
           />
         </Section>
 
-        <TouchableOpacity style={styles.editButton}>
-          <Text style={styles.editButtonText}>Edit Profile (coming soon)</Text>
+        <TouchableOpacity style={styles.editButton} onPress={() => setEditing(true)}>
+          <Text style={styles.editButtonText}>Edit Profile</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
@@ -385,15 +404,15 @@ const styles = StyleSheet.create({
   editButton: {
     marginHorizontal: 20,
     marginTop: 24,
-    backgroundColor: colors.surfaceElevated,
+    backgroundColor: colors.primary,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
   },
   editButtonText: {
-    color: colors.textSecondary,
-    fontWeight: '600',
-    fontSize: 14,
+    color: colors.white,
+    fontWeight: '700',
+    fontSize: 15,
   },
   signOutButton: {
     marginHorizontal: 20,
