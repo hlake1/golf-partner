@@ -26,15 +26,31 @@ interface Club {
 interface Props {
   onCancel: () => void;
   onCreated: () => void;
+  /** Optional pre-selected club id (e.g. tapped from the map). */
+  prefillClubId?: string | null;
+  /** Optional pre-selected date (e.g. tapped from the schedule empty state). ISO date or Date. */
+  prefillDate?: Date | string | null;
 }
 
-export default function CreateRoundScreen({ onCancel, onCreated }: Props) {
+export default function CreateRoundScreen({
+  onCancel,
+  onCreated,
+  prefillClubId,
+  prefillDate,
+}: Props) {
   const { user } = useAuth();
   const [clubs, setClubs] = useState<Club[]>([]);
   const [clubsLoading, setClubsLoading] = useState(true);
   const [clubModal, setClubModal] = useState(false);
   const [selectedClub, setSelectedClub] = useState<Club | null>(null);
   const [scheduledFor, setScheduledFor] = useState<Date>(() => {
+    // If a prefill date was supplied, use it (at 10:00 local time).
+    if (prefillDate) {
+      const base =
+        typeof prefillDate === 'string' ? new Date(prefillDate) : new Date(prefillDate);
+      base.setHours(10, 0, 0, 0);
+      return base;
+    }
     const d = new Date();
     d.setDate(d.getDate() + 1); // default: tomorrow
     d.setHours(10, 0, 0, 0);
@@ -59,6 +75,13 @@ export default function CreateRoundScreen({ onCancel, onCreated }: Props) {
         setClubsLoading(false);
       });
   }, []);
+
+  // If a prefillClubId is provided, snap the selection once clubs are loaded.
+  useEffect(() => {
+    if (!prefillClubId || selectedClub) return;
+    const match = clubs.find((c) => c.id === prefillClubId);
+    if (match) setSelectedClub(match);
+  }, [prefillClubId, clubs, selectedClub]);
 
   async function submit() {
     if (!user) return;

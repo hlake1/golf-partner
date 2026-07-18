@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import { colors } from '../theme/colors';
 import { useRounds, type RoundListItem } from '../hooks/useRounds';
 import { usePendingRequests, type PendingRequest } from '../hooks/usePendingRequests';
@@ -25,14 +26,52 @@ import MyScheduleScreen from './MyScheduleScreen';
 
 type Mode = 'schedule' | 'discover';
 
+/**
+ * Optional params that can be passed when navigating to this tab, e.g.
+ *   navigation.navigate('Calendar', { postRound: { clubId, date } })
+ * When present, we auto-open the Create Round flow with those prefills.
+ */
+interface CalendarRouteParams {
+  postRound?: {
+    clubId?: string | null;
+    date?: string | null;
+  };
+}
+
 export default function CalendarScreen() {
   const { user } = useAuth();
   const { rounds, loading, refresh } = useRounds();
   const { requests, refresh: refreshRequests } = usePendingRequests();
   const [creating, setCreating] = useState(false);
+  const [prefill, setPrefill] = useState<{ clubId?: string | null; date?: string | null }>({});
   const [requestingId, setRequestingId] = useState<string | null>(null);
   const [actioningId, setActioningId] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>('schedule');
+
+  const route = useRoute();
+  const navigation = useNavigation<any>();
+  const routeParams = (route.params as CalendarRouteParams | undefined) ?? {};
+
+  // Watch for a `postRound` param arriving from another screen (e.g. Map tab).
+  // When it does, open the Create Round flow with the prefill, then clear the
+  // param so navigating back and returning doesn't re-open it.
+  useEffect(() => {
+    if (routeParams.postRound) {
+      setPrefill({
+        clubId: routeParams.postRound.clubId ?? null,
+        date: routeParams.postRound.date ?? null,
+      });
+      setCreating(true);
+      // Clear the param so a subsequent tab tap doesn't re-open the modal.
+      navigation.setParams({ postRound: undefined } as never);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeParams.postRound]);
+
+  function openCreateForDate(localDate: string) {
+    setPrefill({ clubId: null, date: localDate });
+    setCreating(true);
+  }
   const [messageModal, setMessageModal] = useState<{ round: RoundListItem | null; text: string }>({
     round: null,
     text: '',
@@ -84,9 +123,15 @@ export default function CalendarScreen() {
   if (creating) {
     return (
       <CreateRoundScreen
-        onCancel={() => setCreating(false)}
+        prefillClubId={prefill.clubId}
+        prefillDate={prefill.date}
+        onCancel={() => {
+          setCreating(false);
+          setPrefill({});
+        }}
         onCreated={() => {
           setCreating(false);
+          setPrefill({});
           refreshAll();
         }}
       />
@@ -164,7 +209,7 @@ export default function CalendarScreen() {
       </View>
 
       {mode === 'schedule' ? (
-        <MyScheduleScreen />
+        <MyScheduleScreen onPostRoundForDate={openCreateForDate} />
       ) : (
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -177,7 +222,13 @@ export default function CalendarScreen() {
           </Text>
         </View>
 
-        <TouchableOpacity style={styles.createButton} onPress={() => setCreating(true)}>
+        <TouchableOpacity
+          style={styles.createButton}
+          onPress={() => {
+            setPrefill({});
+            setCreating(true);
+          }}
+        >
           <Text style={styles.createButtonText}>+ Post a Round</Text>
         </TouchableOpacity>
 

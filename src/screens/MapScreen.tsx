@@ -10,6 +10,7 @@ import {
   Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import MapView, { Marker, Region, PROVIDER_DEFAULT } from 'react-native-maps';
 import { colors } from '../theme/colors';
@@ -44,6 +45,12 @@ function regionForRadius(
 
 export default function MapScreen() {
   const { profile } = useProfile();
+  const navigation = useNavigation<any>();
+
+  // Jump to the Calendar tab and pre-open the Create Round flow with this club.
+  const postRoundHere = (clubId: string) => {
+    navigation.navigate('Calendar', { postRound: { clubId } });
+  };
   const [radius, setRadius] = useState<number>(profile?.search_radius_miles ?? 10);
   const [liveOrigin, setLiveOrigin] = useState<{
     latitude: number;
@@ -161,7 +168,12 @@ export default function MapScreen() {
           ) : (
             <View style={styles.list}>
               {clubs.map((c) => (
-                <ClubCard key={c.id} club={c} onOpenWebsite={openWebsite} />
+                <ClubCard
+                  key={c.id}
+                  club={c}
+                  onOpenWebsite={openWebsite}
+                  onPostRound={postRoundHere}
+                />
               ))}
               {clubs.length === 0 && !error && (
                 <Text style={styles.emptyText}>
@@ -307,14 +319,24 @@ export default function MapScreen() {
                 {selected.address}
               </Text>
             )}
-            {selected.website && (
+            <View style={styles.cardBtnRow}>
+              {selected.website && (
+                <TouchableOpacity
+                  style={[styles.cardBtn, styles.cardBtnSecondary]}
+                  onPress={() => openWebsite(selected.website!)}
+                >
+                  <Text style={[styles.cardBtnText, styles.cardBtnSecondaryText]}>
+                    Visit website
+                  </Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
                 style={styles.cardBtn}
-                onPress={() => openWebsite(selected.website!)}
+                onPress={() => postRoundHere(selected.id)}
               >
-                <Text style={styles.cardBtnText}>Visit website</Text>
+                <Text style={styles.cardBtnText}>Post round</Text>
               </TouchableOpacity>
-            )}
+            </View>
           </View>
         )}
       </View>
@@ -326,23 +348,35 @@ export default function MapScreen() {
 function ClubCard({
   club,
   onOpenWebsite,
+  onPostRound,
 }: {
   club: NearbyClub;
   onOpenWebsite: (url: string) => void;
+  onPostRound: (clubId: string) => void;
 }) {
   return (
     <View style={styles.webCard}>
       <Text style={styles.cardTitle}>{club.name}</Text>
       <Text style={styles.cardDistance}>{club.distance_miles} miles away</Text>
       {club.address && <Text style={styles.cardAddress}>{club.address}</Text>}
-      {club.website && (
+      <View style={styles.cardBtnRow}>
+        {club.website && (
+          <TouchableOpacity
+            style={[styles.cardBtn, styles.cardBtnSecondary]}
+            onPress={() => onOpenWebsite(club.website!)}
+          >
+            <Text style={[styles.cardBtnText, styles.cardBtnSecondaryText]}>
+              Visit website
+            </Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={styles.cardBtn}
-          onPress={() => onOpenWebsite(club.website!)}
+          onPress={() => onPostRound(club.id)}
         >
-          <Text style={styles.cardBtnText}>Visit website</Text>
+          <Text style={styles.cardBtnText}>Post round</Text>
         </TouchableOpacity>
-      )}
+      </View>
     </View>
   );
 }
@@ -528,18 +562,32 @@ const styles = StyleSheet.create({
     marginTop: 8,
     lineHeight: 18,
   },
-  cardBtn: {
+  cardBtnRow: {
     marginTop: 12,
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  cardBtn: {
     backgroundColor: colors.primary,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
-    alignSelf: 'flex-start',
+    flexGrow: 1,
+    alignItems: 'center',
   },
   cardBtnText: {
     color: colors.white,
     fontSize: 14,
     fontWeight: '700',
+  },
+  cardBtnSecondary: {
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  cardBtnSecondaryText: {
+    color: colors.primary,
   },
   // Web fallback styles
   webWrap: {

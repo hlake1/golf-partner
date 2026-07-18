@@ -14,6 +14,14 @@ import { colors } from '../theme/colors';
 import { useMyRounds, type MyRound } from '../hooks/useMyRounds';
 import RoundDetailScreen from './RoundDetailScreen';
 
+interface Props {
+  /**
+   * Optional callback fired when the user hits "Post a round for this day"
+   * in the empty state. Receives an ISO date string (YYYY-MM-DD).
+   */
+  onPostRoundForDate?: (localDate: string) => void;
+}
+
 /**
  * "My Schedule" — RotaReady-style calendar of the user's rounds.
  * - Month grid at top with dots on days that have rounds
@@ -21,7 +29,7 @@ import RoundDetailScreen from './RoundDetailScreen';
  * - Tap a day to filter the agenda list below
  * - Tap a round row to open full detail
  */
-export default function MyScheduleScreen() {
+export default function MyScheduleScreen({ onPostRoundForDate }: Props = {}) {
   const { rounds, loading, refresh } = useMyRounds();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [openRound, setOpenRound] = useState<MyRound | null>(null);
@@ -150,6 +158,14 @@ export default function MyScheduleScreen() {
                 ? 'Try another day, or post a round for this one.'
                 : 'Post a round or join one from Discover to see it here.'}
             </Text>
+            {selectedDate && onPostRoundForDate && (
+              <TouchableOpacity
+                style={styles.emptyCta}
+                onPress={() => onPostRoundForDate(selectedDate)}
+              >
+                <Text style={styles.emptyCtaText}>+ Post a round</Text>
+              </TouchableOpacity>
+            )}
           </View>
         ) : (
           visibleRounds.map((round) => (
@@ -253,6 +269,18 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  emptyCta: {
+    marginTop: 16,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  emptyCtaText: {
+    color: colors.white,
+    fontWeight: '700',
+    fontSize: 14,
   },
   agendaRow: {
     flexDirection: 'row',
