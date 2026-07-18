@@ -17,7 +17,14 @@ import { useProfile } from '../hooks/useProfile';
 import { useNearbyClubs, NearbyClub } from '../hooks/useNearbyClubs';
 
 // Simple radius options that match the rest of the app (Home screen uses similar).
-const RADIUS_OPTIONS = [5, 10, 25, 50];
+// 'all' fetches every club by using a very large radius (covers the whole planet).
+const RADIUS_OPTIONS: Array<{ label: string; miles: number; isAll?: boolean }> = [
+  { label: '5 mi', miles: 5 },
+  { label: '10 mi', miles: 10 },
+  { label: '25 mi', miles: 25 },
+  { label: '50 mi', miles: 50 },
+  { label: 'All', miles: 25000, isAll: true },
+];
 
 // Rough conversion: 1 latitude degree ≈ 69 miles. Longitude scales by cos(lat).
 function regionForRadius(
@@ -46,6 +53,7 @@ export default function MapScreen() {
     'idle'
   );
   const [selected, setSelected] = useState<NearbyClub | null>(null);
+  const [showAll, setShowAll] = useState(false);
   const mapRef = useRef<MapView>(null);
 
   // Keep radius in sync with profile's default (only until user picks manually).
@@ -86,22 +94,51 @@ export default function MapScreen() {
     };
   }, []);
 
+  // When "All" is selected we fetch with a huge radius (whole planet).
+  const effectiveRadiusMiles = showAll ? 25000 : radius;
+
   const { clubs, loading, error, usedOrigin, refresh } = useNearbyClubs({
-    radiusMiles: radius,
+    radiusMiles: effectiveRadiusMiles,
     origin: liveOrigin,
   });
 
+  // Framing radius for the map view (not the query). For "All" we'd want to
+  // fit-to-markers, so leave initial framing as the last chosen local radius.
+  const framingRadius = showAll ? radius : radius;
+
   const initialRegion = useMemo<Region | null>(() => {
     if (!usedOrigin) return null;
-    return regionForRadius(usedOrigin, radius);
-  }, [usedOrigin, radius]);
+    return regionForRadius(usedOrigin, framingRadius);
+  }, [usedOrigin, framingRadius]);
 
-  // Re-frame the map when the origin/radius changes.
+  // Re-frame the map when radius changes (not on every origin tick).
+  // - Normal radius: zoom to fit that radius around origin.
+  // - "All": fit to all markers so the user sees the full spread.
   useEffect(() => {
-    if (mapRef.current && usedOrigin) {
+    if (!mapRef.current) return;
+    if (showAll && clubs.length > 0) {
+      mapRef.current.fitToCoordinates(
+        clubs.map((c) => ({ latitude: c.latitude, longitude: c.longitude })),
+        {
+          edgePadding: { top: 80, right: 40, bottom: 160, left: 40 },
+          animated: true,
+        }
+      );
+      return;
+    }
+    if (usedOrigin) {
       mapRef.current.animateToRegion(regionForRadius(usedOrigin, radius), 500);
     }
-  }, [usedOrigin?.latitude, usedOrigin?.longitude, radius]);
+    // Intentionally NOT depending on usedOrigin here so scrolling the map
+    // doesn't yank you back. Recentre button is the explicit way to return.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [radius, showAll, clubs.length]);
+
+  // Recentre: animate back to the user's origin at their chosen radius.
+  const recentre = () => {
+    if (!mapRef.current || !usedOrigin) return;
+    mapRef.current.animateToRegion(regionForRadius(usedOrigin, radius), 500);
+  };
 
   const openWebsite = (url: string) => {
     const withScheme = url.startsWith('http') ? url : `https://${url}`;
@@ -145,19 +182,25 @@ export default function MapScreen() {
       <View style={styles.radiusBar}>
         <Text style={styles.radiusLabel}>Radius</Text>
         <View style={styles.radiusPills}>
-          {RADIUS_OPTIONS.map((r) => {
-            const active = r === radius;
+          {RADIUS_OPTIONS.map((opt) => {
+            const active = opt.isAll ? showAll : !showAll && opt.miles === radius;
             return (
               <TouchableOpacity
-                key={r}
+                key={opt.label}
                 style={[styles.pill, active && styles.pillActive]}
                 onPress={() => {
-                  setRadius(r);
-                  setUserPickedRadius(true);
+                  if (opt.isAll) {
+                    setShowAll(true);
+                    setSelected(null);
+                  } else {
+                    setShowAll(false);
+                    setRadius(opt.miles);
+                    setUserPickedRadius(true);
+                  }
                 }}
               >
                 <Text style={[styles.pillText, active && styles.pillTextActive]}>
-                  {r} mi
+                  {opt.label}
                 </Text>
               </TouchableOpacity>
             );
@@ -215,9 +258,22 @@ export default function MapScreen() {
         {!loading && initialRegion && (
           <View style={styles.countChip}>
             <Text style={styles.countChipText}>
-              {clubs.length} course{clubs.length === 1 ? '' : 's'} within {radius} mi
+              {clubs.length} course{clubs.length === 1 ? '' : 's'}{' '}
+              {showAll ? 'total' : `within ${radius} mi`}
             </Text>
           </View>
+        )}
+
+        {/* Recentre button (lifts up when a course card is open) */}
+        {usedOrigin && initialRegion && (
+          <TouchableOpacity
+            style={[styles.recentreBtn, selected && styles.recentreBtnLifted]}
+            onPress={recentre}
+            hitSlop={8}
+            accessibilityLabel="Recentre map on your location"
+          >
+            <Text style={styles.recentreIcon}>📍</Text>
+          </TouchableOpacity>
         )}
 
         {/* Error banner */}
@@ -378,6 +434,30 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  recentreBtn: {
+    position: 'absolute',
+    right: 12,
+    bottom: 24,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  recentreBtnLifted: {
+    bottom: 180,
+  },
+  recentreIcon: {
+    fontSize: 22,
   },
   countChipText: {
     color: colors.text,
