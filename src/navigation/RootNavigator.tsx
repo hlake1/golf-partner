@@ -1,19 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text, View, StyleSheet } from 'react-native';
+import { Text, View, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors } from '../theme/colors';
+import { useNotifications } from '../hooks/useNotifications';
 
 import HomeScreen from '../screens/HomeScreen';
 import MapScreen from '../screens/MapScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import ChatListScreen from '../screens/ChatListScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
 
 const Tab = createBottomTabNavigator();
 
 // Simple emoji-based tab icons for now.
-// We can swap these for proper vector icons later.
 function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
   return (
     <View style={styles.iconWrap}>
@@ -22,7 +23,44 @@ function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
   );
 }
 
+// Header bell icon with unread badge.
+function NotificationBell({ onPress }: { onPress: () => void }) {
+  const { unreadCount } = useNotifications();
+  return (
+    <TouchableOpacity onPress={onPress} style={styles.bellWrap} hitSlop={10}>
+      <Text style={styles.bell}>🔔</Text>
+      {unreadCount > 0 && (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+}
+
 export default function RootNavigator() {
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+
+  // Overlay NotificationsScreen on top of the tabs when open.
+  if (notificationsOpen) {
+    return (
+      <NavigationContainer>
+        <NotificationsScreen
+          onBack={() => setNotificationsOpen(false)}
+          // Deep-link handlers can be wired up later. For now, tapping a
+          // notification marks it read and closes back to the tabs; the user
+          // can navigate to the round/chat/friend request via the normal tabs.
+          onOpenRound={() => setNotificationsOpen(false)}
+          onOpenConversation={() => setNotificationsOpen(false)}
+          onOpenFriendRequests={() => setNotificationsOpen(false)}
+          onOpenPlayer={() => setNotificationsOpen(false)}
+        />
+      </NavigationContainer>
+    );
+  }
+
   return (
     <NavigationContainer>
       <Tab.Navigator
@@ -43,6 +81,9 @@ export default function RootNavigator() {
           headerTitleStyle: {
             fontWeight: '700',
           },
+          headerRight: () => (
+            <NotificationBell onPress={() => setNotificationsOpen(true)} />
+          ),
         }}
       >
         <Tab.Screen
@@ -102,5 +143,32 @@ const styles = StyleSheet.create({
   iconFocused: {
     opacity: 1,
     transform: [{ scale: 1.15 }],
+  },
+  bellWrap: {
+    marginRight: 14,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+  },
+  bell: {
+    fontSize: 22,
+  },
+  badge: {
+    position: 'absolute',
+    top: -2,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.accent,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: '700',
   },
 });

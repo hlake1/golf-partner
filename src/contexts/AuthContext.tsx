@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { unregisterPushTokensForUser } from '../lib/notifications';
 
 interface AuthContextValue {
   session: Session | null;
@@ -49,6 +50,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    // Clear push tokens BEFORE signing out (RLS requires an authed session).
+    const currentUserId = session?.user?.id;
+    if (currentUserId) {
+      await unregisterPushTokensForUser(currentUserId);
+    }
     await supabase.auth.signOut();
   };
 
