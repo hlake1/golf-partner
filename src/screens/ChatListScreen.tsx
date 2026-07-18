@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -26,25 +26,31 @@ interface ChatSummary {
   updated_at: string;
 }
 
-type Mode = 'chats' | 'friends';
 type OpenScreen =
   | { kind: 'none' }
-  | { kind: 'chat'; friend: Friend | { id: string; full_name: string; photo_url: string | null } }
+  | { kind: 'chat'; friend: { id: string; full_name: string; photo_url: string | null } }
   | { kind: 'profile'; userId: string };
 
+/**
+ * Unified Messages tab.
+ * One list, in order:
+ *   1. Incoming friend requests (with Accept / Decline actions)
+ *   2. Active conversations (with last message preview + unread badge)
+ *   3. Friends without a conversation yet ("Say hi \u2192" prompt)
+ *   4. Sent requests (small footer section)
+ */
 export default function ChatListScreen() {
   const { user } = useAuth();
   const { friends, incoming, outgoing, refresh: refreshFriends } = useFriends();
   const [chats, setChats] = useState<ChatSummary[]>([]);
   const [chatsLoading, setChatsLoading] = useState(true);
-  const [mode, setMode] = useState<Mode>('chats');
   const [open, setOpen] = useState<OpenScreen>({ kind: 'none' });
   const [actioningId, setActioningId] = useState<string | null>(null);
 
   const loadChats = useCallback(async () => {
     if (!user) return;
     setChatsLoading(true);
-    // Pull my conversations + latest message
+    // Pull my conversations + latest message.
     const { data: convs } = await supabase
       .from('conversations')
       .select(
@@ -81,7 +87,7 @@ export default function ChatListScreen() {
         updated_at: c.last_message_at,
       });
     }
-    // Only show conversations that have at least one message
+    // Only show conversations that have at least one message.
     setChats(summaries.filter((s) => s.last_message !== null));
     setChatsLoading(false);
   }, [user]);
@@ -90,12 +96,18 @@ export default function ChatListScreen() {
     loadChats();
   }, [loadChats]);
 
-  // Refresh chats when a chat screen closes
+  // Refresh chats + friends when returning from a full-screen push.
   const closeAndRefresh = () => {
     setOpen({ kind: 'none' });
     loadChats();
     refreshFriends();
   };
+
+  // Friends that don't yet have an active conversation with the user.
+  const friendsWithoutChat = useMemo(() => {
+    const chatFriendIds = new Set(chats.map((c) => c.other.id));
+    return friends.filter((f) => !chatFriendIds.has(f.id));
+  }, [chats, friends]);
 
   if (open.kind === 'chat') {
     return (
@@ -146,28 +158,14 @@ export default function ChatListScreen() {
     refreshFriends();
   }
 
+  const totallyEmpty =
+    chats.length === 0 &&
+    friends.length === 0 &&
+    incoming.length === 0 &&
+    outgoing.length === 0;
+
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      {/* Segment control */}
-      <View style={styles.segmentBar}>
-        <TouchableOpacity
-          style={[styles.segment, mode === 'chats' && styles.segmentActive]}
-          onPress={() => setMode('chats')}
-        >
-          <Text style={[styles.segmentText, mode === 'chats' && styles.segmentTextActive]}>
-            Chats
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.segment, mode === 'friends' && styles.segmentActive]}
-          onPress={() => setMode('friends')}
-        >
-          <Text style={[styles.segmentText, mode === 'friends' && styles.segmentTextActive]}>
-            Friends {incoming.length > 0 && `(${incoming.length})`}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
       <ScrollView
         contentContainerStyle={{ paddingBottom: 24 }}
         refreshControl={
@@ -180,99 +178,34 @@ export default function ChatListScreen() {
           />
         }
       >
-        {mode === 'chats' ? (
-          chatsLoading && chats.length === 0 ? (
-            <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
-          ) : chats.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyEmoji}>💬</Text>
-              <Text style={styles.emptyTitle}>No conversations yet</Text>
-              <Text style={styles.emptyText}>
-                Add friends first, then start a chat from their profile.
-              </Text>
-              <TouchableOpacity
-                style={styles.emptyBtn}
-                onPress={() => setMode('friends')}
-              >
-                <Text style={styles.emptyBtnText}>Go to Friends</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            chats.map((c) => (
-              <TouchableOpacity
-                key={c.conversation_id}
-                style={styles.chatRow}
-                onPress={() =>
-                  setOpen({
-                    kind: 'chat',
-                    friend: {
-                      id: c.other.id,
-                      full_name: c.other.full_name,
-                      photo_url: c.other.photo_url,
-                    },
-                  })
-                }
-              >
-                {c.other.photo_url ? (
-                  <Image source={{ uri: c.other.photo_url }} style={styles.chatAvatar} />
-                ) : (
-                  <View style={styles.chatAvatarPlaceholder}>
-                    <Text style={styles.chatAvatarInitial}>
-                      {c.other.full_name.charAt(0)?.toUpperCase() ?? '?'}
-                    </Text>
-                  </View>
-                )}
-                <View style={styles.chatBody}>
-                  <View style={styles.chatHeader}>
-                    <Text style={styles.chatName}>{c.other.full_name}</Text>
-                    <Text style={styles.chatTime}>
-                      {relTime(c.last_message?.created_at)}
-                    </Text>
-                  </View>
-                  <Text
-                    style={[
-                      styles.chatPreview,
-                      c.unread_count > 0 && styles.chatPreviewUnread,
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {c.last_message?.sender_id === user?.id ? 'You: ' : ''}
-                    {c.last_message?.content ?? ''}
-                  </Text>
-                </View>
-                {c.unread_count > 0 && (
-                  <View style={styles.unreadBadge}>
-                    <Text style={styles.unreadText}>{c.unread_count}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))
-          )
+        {chatsLoading && totallyEmpty ? (
+          <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
+        ) : totallyEmpty ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyEmoji}>💬</Text>
+            <Text style={styles.emptyTitle}>No messages yet</Text>
+            <Text style={styles.emptyText}>
+              Find golfers near you on the Home tab. Once you connect, chats
+              show up here.
+            </Text>
+          </View>
         ) : (
           <>
+            {/* 1. Incoming friend requests */}
             {incoming.length > 0 && (
               <>
                 <Text style={styles.sectionTitle}>
-                  Friend Requests ({incoming.length})
+                  Friend requests ({incoming.length})
                 </Text>
                 {incoming.map((req) => (
                   <View key={req.id} style={styles.requestRow}>
                     <TouchableOpacity
-                      style={styles.requestAvatarWrap}
                       onPress={() => setOpen({ kind: 'profile', userId: req.other.id })}
                     >
-                      {req.other.photo_url ? (
-                        <Image
-                          source={{ uri: req.other.photo_url }}
-                          style={styles.chatAvatar}
-                        />
-                      ) : (
-                        <View style={styles.chatAvatarPlaceholder}>
-                          <Text style={styles.chatAvatarInitial}>
-                            {req.other.full_name.charAt(0)?.toUpperCase() ?? '?'}
-                          </Text>
-                        </View>
-                      )}
+                      <Avatar
+                        name={req.other.full_name}
+                        photoUrl={req.other.photo_url}
+                      />
                     </TouchableOpacity>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.chatName}>{req.other.full_name}</Text>
@@ -303,64 +236,90 @@ export default function ChatListScreen() {
               </>
             )}
 
-            <Text style={styles.sectionTitle}>Friends ({friends.length})</Text>
-            {friends.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyEmoji}>👥</Text>
-                <Text style={styles.emptyTitle}>No friends yet</Text>
-                <Text style={styles.emptyText}>
-                  Find people on the Home tab, or accept someone into your round.
-                </Text>
-              </View>
-            ) : (
-              friends.map((f) => (
-                <TouchableOpacity
-                  key={f.id}
-                  style={styles.chatRow}
-                  onPress={() =>
-                    setOpen({
-                      kind: 'chat',
-                      friend: f,
-                    })
-                  }
-                >
-                  {f.photo_url ? (
-                    <Image source={{ uri: f.photo_url }} style={styles.chatAvatar} />
-                  ) : (
-                    <View style={styles.chatAvatarPlaceholder}>
-                      <Text style={styles.chatAvatarInitial}>
-                        {f.full_name.charAt(0)?.toUpperCase() ?? '?'}
-                      </Text>
-                    </View>
-                  )}
-                  <View style={styles.chatBody}>
-                    <Text style={styles.chatName}>{f.full_name}</Text>
-                    <Text style={styles.chatPreview}>
-                      {f.origin === 'round_accept' ? '⛳ Met via a round' : '👋 Friend'}
-                    </Text>
-                  </View>
-                  <Text style={styles.chevron}>›</Text>
-                </TouchableOpacity>
-              ))
-            )}
-
-            {outgoing.length > 0 && (
+            {/* 2. Active conversations */}
+            {chats.length > 0 && (
               <>
-                <Text style={styles.sectionTitle}>Requests Sent</Text>
-                {outgoing.map((req) => (
-                  <View key={req.id} style={styles.chatRow}>
-                    {req.other.photo_url ? (
-                      <Image
-                        source={{ uri: req.other.photo_url }}
-                        style={styles.chatAvatar}
-                      />
-                    ) : (
-                      <View style={styles.chatAvatarPlaceholder}>
-                        <Text style={styles.chatAvatarInitial}>
-                          {req.other.full_name.charAt(0)?.toUpperCase() ?? '?'}
+                <Text style={styles.sectionTitle}>Conversations</Text>
+                {chats.map((c) => (
+                  <TouchableOpacity
+                    key={c.conversation_id}
+                    style={styles.chatRow}
+                    onPress={() =>
+                      setOpen({
+                        kind: 'chat',
+                        friend: {
+                          id: c.other.id,
+                          full_name: c.other.full_name,
+                          photo_url: c.other.photo_url,
+                        },
+                      })
+                    }
+                  >
+                    <Avatar name={c.other.full_name} photoUrl={c.other.photo_url} />
+                    <View style={styles.chatBody}>
+                      <View style={styles.chatHeader}>
+                        <Text style={styles.chatName}>{c.other.full_name}</Text>
+                        <Text style={styles.chatTime}>
+                          {relTime(c.last_message?.created_at)}
                         </Text>
                       </View>
+                      <Text
+                        style={[
+                          styles.chatPreview,
+                          c.unread_count > 0 && styles.chatPreviewUnread,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {c.last_message?.sender_id === user?.id ? 'You: ' : ''}
+                        {c.last_message?.content ?? ''}
+                      </Text>
+                    </View>
+                    {c.unread_count > 0 && (
+                      <View style={styles.unreadBadge}>
+                        <Text style={styles.unreadText}>{c.unread_count}</Text>
+                      </View>
                     )}
+                  </TouchableOpacity>
+                ))}
+              </>
+            )}
+
+            {/* 3. Friends without a chat yet */}
+            {friendsWithoutChat.length > 0 && (
+              <>
+                <Text style={styles.sectionTitle}>
+                  Say hi to your friends ({friendsWithoutChat.length})
+                </Text>
+                {friendsWithoutChat.map((f) => (
+                  <TouchableOpacity
+                    key={f.id}
+                    style={styles.chatRow}
+                    onPress={() => setOpen({ kind: 'chat', friend: f })}
+                  >
+                    <Avatar name={f.full_name} photoUrl={f.photo_url} />
+                    <View style={styles.chatBody}>
+                      <Text style={styles.chatName}>{f.full_name}</Text>
+                      <Text style={styles.chatPreview}>
+                        {f.origin === 'round_accept' ? '⛳ Met via a round' : '👋 Friend'}
+                        {'  ·  Tap to say hi'}
+                      </Text>
+                    </View>
+                    <Text style={styles.chevron}>›</Text>
+                  </TouchableOpacity>
+                ))}
+              </>
+            )}
+
+            {/* 4. Sent requests */}
+            {outgoing.length > 0 && (
+              <>
+                <Text style={styles.sectionTitle}>Requests sent</Text>
+                {outgoing.map((req) => (
+                  <View key={req.id} style={styles.chatRow}>
+                    <Avatar
+                      name={req.other.full_name}
+                      photoUrl={req.other.photo_url}
+                    />
                     <View style={styles.chatBody}>
                       <Text style={styles.chatName}>{req.other.full_name}</Text>
                       <Text style={styles.chatPreview}>⏳ Request pending</Text>
@@ -373,6 +332,26 @@ export default function ChatListScreen() {
         )}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+// Reusable avatar (image or initial-in-circle).
+function Avatar({
+  name,
+  photoUrl,
+}: {
+  name: string;
+  photoUrl: string | null | undefined;
+}) {
+  if (photoUrl) {
+    return <Image source={{ uri: photoUrl }} style={styles.chatAvatar} />;
+  }
+  return (
+    <View style={styles.chatAvatarPlaceholder}>
+      <Text style={styles.chatAvatarInitial}>
+        {name.charAt(0)?.toUpperCase() ?? '?'}
+      </Text>
+    </View>
   );
 }
 
@@ -392,26 +371,6 @@ function relTime(iso?: string) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  segmentBar: {
-    flexDirection: 'row',
-    marginHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 8,
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: 12,
-    padding: 4,
-  },
-  segment: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8 },
-  segmentActive: {
-    backgroundColor: colors.surface,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  segmentText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
-  segmentTextActive: { color: colors.primary },
   sectionTitle: {
     fontSize: 13,
     fontWeight: '700',
@@ -436,13 +395,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 16,
   },
-  emptyBtn: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  emptyBtnText: { color: colors.white, fontWeight: '700' },
   chatRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -494,7 +446,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
-  requestAvatarWrap: {},
   requestActions: { flexDirection: 'row', gap: 6 },
   declineBtn: {
     paddingHorizontal: 12,

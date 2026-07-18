@@ -14,22 +14,32 @@ import * as ImagePicker from 'expo-image-picker';
 import { colors } from '../theme/colors';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../hooks/useProfile';
+import { useFriends, type Friend } from '../hooks/useFriends';
 import { supabase } from '../lib/supabase';
 import { uploadProfilePhoto } from '../lib/uploadProfilePhoto';
 import EditProfileScreen from './EditProfileScreen';
+import PlayerProfileScreen from './PlayerProfileScreen';
+import ChatScreen from './ChatScreen';
 
 interface ClubRow {
   club_id: string;
   clubs: { id: string; name: string } | null;
 }
 
+type FriendOpen =
+  | { kind: 'none' }
+  | { kind: 'profile'; userId: string }
+  | { kind: 'chat'; friend: Friend };
+
 export default function ProfileScreen() {
   const { signOut, user } = useAuth();
   const { profile, loading, refresh } = useProfile();
+  const { friends, loading: friendsLoading, refresh: refreshFriends } = useFriends();
   const [clubs, setClubs] = useState<{ id: string; name: string }[]>([]);
   const [clubsLoading, setClubsLoading] = useState(true);
   const [photoUpdating, setPhotoUpdating] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [friendOpen, setFriendOpen] = useState<FriendOpen>({ kind: 'none' });
 
   // Refresh clubs after editing (so club chips reflect the changes).
   const [clubsVersion, setClubsVersion] = useState(0);
@@ -114,6 +124,36 @@ export default function ProfileScreen() {
     );
   }
 
+  // Full-screen friend profile / chat push.
+  if (friendOpen.kind === 'profile') {
+    return (
+      <PlayerProfileScreen
+        userId={friendOpen.userId}
+        onBack={() => {
+          setFriendOpen({ kind: 'none' });
+          refreshFriends();
+        }}
+        onOpenChat={(id) => {
+          const f = friends.find((f) => f.id === id);
+          if (f) setFriendOpen({ kind: 'chat', friend: f });
+        }}
+      />
+    );
+  }
+  if (friendOpen.kind === 'chat') {
+    return (
+      <ChatScreen
+        friendId={friendOpen.friend.id}
+        friendName={friendOpen.friend.full_name}
+        friendPhoto={friendOpen.friend.photo_url}
+        onBack={() => {
+          setFriendOpen({ kind: 'none' });
+          refreshFriends();
+        }}
+      />
+    );
+  }
+
   const initial = profile.full_name?.charAt(0)?.toUpperCase() ?? '⛳';
   const styleLabel = profile.playing_style === 'competitive' ? '🏆' : '😌';
   const drinkLabel = profile.up_for_drink_afterwards ? '✅' : '❌';
@@ -162,6 +202,45 @@ export default function ProfileScreen() {
           <StatCard label="Style" value={styleLabel} />
           <StatCard label="Drinks After" value={drinkLabel} />
         </View>
+
+        {/* Friends */}
+        <Section title={`Friends (${friends.length})`}>
+          {friendsLoading && friends.length === 0 ? (
+            <ActivityIndicator color={colors.primary} />
+          ) : friends.length === 0 ? (
+            <Text style={styles.emptyText}>
+              No friends yet — accept a join request or send one to add friends.
+            </Text>
+          ) : (
+            <View style={styles.friendsList}>
+              {friends.map((f) => (
+                <TouchableOpacity
+                  key={f.id}
+                  style={styles.friendRow}
+                  onPress={() => setFriendOpen({ kind: 'profile', userId: f.id })}
+                  activeOpacity={0.7}
+                >
+                  {f.photo_url ? (
+                    <Image source={{ uri: f.photo_url }} style={styles.friendAvatar} />
+                  ) : (
+                    <View style={styles.friendAvatarPlaceholder}>
+                      <Text style={styles.friendAvatarInitial}>
+                        {f.full_name.charAt(0)?.toUpperCase() ?? '?'}
+                      </Text>
+                    </View>
+                  )}
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.friendName}>{f.full_name}</Text>
+                    <Text style={styles.friendMeta}>
+                      {f.origin === 'round_accept' ? '⛳ Met via a round' : '👋 Friend'}
+                    </Text>
+                  </View>
+                  <Text style={styles.chevron}>›</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </Section>
 
         {/* Club Memberships */}
         <Section title="Club Memberships">
@@ -430,5 +509,49 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 12,
     marginTop: 8,
+  },
+  friendsList: {
+    gap: 6,
+  },
+  friendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    gap: 12,
+    borderRadius: 10,
+  },
+  friendAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  friendAvatarPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  friendAvatarInitial: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.white,
+  },
+  friendName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  friendMeta: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  chevron: {
+    fontSize: 22,
+    color: colors.textMuted,
+    fontWeight: '300',
   },
 });
