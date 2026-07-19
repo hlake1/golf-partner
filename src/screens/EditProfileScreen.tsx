@@ -584,7 +584,7 @@ const styles = StyleSheet.create({
   },
   choiceCardActive: {
     borderColor: colors.primary,
-    backgroundColor: '#F0F7F2',
+    backgroundColor: colors.surfaceSelected,
   },
   choiceEmoji: {
     fontSize: 28,
@@ -667,7 +667,7 @@ const styles = StyleSheet.create({
   },
   clubItemActive: {
     borderColor: colors.primary,
-    backgroundColor: '#F0F7F2',
+    backgroundColor: colors.surfaceSelected,
   },
   clubName: {
     fontSize: 14,

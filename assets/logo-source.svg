@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Scramble mark — stylized "S" curving into a fairway with a flag on top.
+  Designed to match the branding board: navy field, mist stroke, sage flag.
+  1024x1024 (Expo icon size).
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Rounded square background (navy) -->
+  <rect x="0" y="0" width="1024" height="1024" rx="220" ry="220" fill="#0F1622"/>
+
+  <!-- The "S" fairway path -->
+  <!-- Traced as a thick stroke that curves like a golf hole -->
+  <path
+    d="M 720 300
+       C 720 220, 620 180, 500 200
+       C 380 220, 300 300, 300 380
+       C 300 460, 380 500, 500 520
+       C 620 540, 720 580, 720 660
+       C 720 740, 620 780, 500 780"
+    fill="none"
+    stroke="#DCE5EF"
+    stroke-width="72"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- Flagstick -->
+  <line x1="720" y1="120" x2="720" y2="300" stroke="#DCE5EF" stroke-width="12" stroke-linecap="round"/>
+
+  <!-- Flag (sage triangle) -->
+  <path d="M 720 130 L 830 165 L 720 200 Z" fill="#AEB8A7"/>
+
+  <!-- Hole cup dot (at end of fairway) -->
+  <circle cx="500" cy="780" r="22" fill="#AEB8A7"/>
+</svg>

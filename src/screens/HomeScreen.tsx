@@ -498,7 +498,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.border,
   },
-  clubOptionActive: { borderColor: colors.primary, backgroundColor: '#F0F7F2' },
+  clubOptionActive: { borderColor: colors.primary, backgroundColor: colors.surfaceSelected },
   clubOptionName: { fontSize: 15, fontWeight: '600', color: colors.text, flex: 1 },
   clubOptionCheck: { fontSize: 22, color: colors.primary, fontWeight: '800' },
 });

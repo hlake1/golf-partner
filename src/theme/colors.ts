@@ -1,40 +1,47 @@
-// Golf Partner brand colors
-// Inspired by a golf course: greens, sky blues, warm accents
+// Scramble brand colors
+// Palette: navy → steel → ocean → mist, with sage as the natural (temporary) accent.
+// A punchier accent color (Gabriel's pick) will slot into `accent` later.
 
 export const colors = {
-  // Primary - deep golf green
-  primary: '#0F5132',
-  primaryLight: '#198754',
-  primaryDark: '#0A3D22',
+  // Primary - deep navy (headers, primary buttons, brand)
+  primary: '#0F1622',
+  primaryLight: '#243447', // Steel Blue - secondary surfaces/depth
+  primaryDark: '#080D15', // Deeper navy for pressed states
 
-  // Accent - warm sunset (for CTAs, matches)
-  accent: '#F59E0B',
-  accentLight: '#FBBF24',
+  // Mid tones - ocean & mist
+  ocean: '#60738A', // Ocean Blue - mid-tone accents, secondary text on dark
+  mist: '#DCE5EF', // Mist Blue - card surfaces, subtle backgrounds
 
-  // Background
-  background: '#F8FAF8',
+  // Accent - sage (placeholder until Gabriel's final accent color lands)
+  // For CTAs, matched/joined states, brand highlights.
+  accent: '#AEB8A7',
+  accentLight: '#C5CEBF', // Softer sage for hover / subtle highlights
+
+  // Background & surfaces
+  background: '#F6F8FB', // Off-white with a hint of mist
   surface: '#FFFFFF',
-  surfaceElevated: '#F1F5F1',
+  surfaceElevated: '#F1F4F8', // Slightly lifted surface
+  surfaceSelected: '#DCE5EF', // Selected chip / filter background (mist)
 
   // Text
-  text: '#1A1F1A',
-  textSecondary: '#5A625A',
-  textMuted: '#8A928A',
+  text: '#0F1622', // Same as primary - premium feel
+  textSecondary: '#4A5568', // Muted navy-gray
+  textMuted: '#8A94A3', // Ocean-tinted mute
 
   // Borders / dividers
-  border: '#E1E7E1',
-  divider: '#EDF1ED',
+  border: '#D8DFE8',
+  divider: '#E4E9F0',
 
   // Semantic
-  success: '#198754',
+  success: '#4A7C59', // Muted fairway green (tied to sage family)
   danger: '#DC3545',
-  warning: '#F59E0B',
-  info: '#0DCAF0',
+  warning: '#E0A800',
+  info: '#60738A', // Uses ocean blue
 
   // UI states
   white: '#FFFFFF',
   black: '#000000',
-  overlay: 'rgba(0, 0, 0, 0.5)',
+  overlay: 'rgba(15, 22, 34, 0.55)', // Navy-tinted overlay
 } as const;
 
 export type ColorKey = keyof typeof colors;

@@ -56,7 +56,7 @@ export async function requestPushToken(): Promise<string | null> {
       name: 'default',
       importance: Notifications.AndroidImportance.HIGH,
       vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#0F5132',
+      lightColor: '#0F1622',
     });
   }
 

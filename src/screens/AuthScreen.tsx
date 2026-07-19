@@ -74,8 +74,9 @@ export default function AuthScreen() {
           <View style={styles.hero}>
             <Text style={styles.heroEmoji}>⛳</Text>
             <Text style={styles.heroTitle}>Scramble</Text>
+            <Text style={styles.heroTagline}>More golf. Better together.</Text>
             <Text style={styles.heroSubtitle}>
-              Find someone to play with, wherever you are
+              Find someone to play with, wherever you are.
             </Text>
           </View>
 
@@ -203,15 +204,22 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   heroTitle: {
-    fontSize: 30,
+    fontSize: 34,
     fontWeight: '800',
     color: colors.primary,
-    letterSpacing: -0.5,
+    letterSpacing: -0.8,
+  },
+  heroTagline: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.ocean,
+    marginTop: 4,
+    letterSpacing: 0.3,
   },
   heroSubtitle: {
-    fontSize: 15,
+    fontSize: 14,
     color: colors.textSecondary,
-    marginTop: 6,
+    marginTop: 10,
     textAlign: 'center',
     paddingHorizontal: 32,
   },
