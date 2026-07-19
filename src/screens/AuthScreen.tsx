@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
+import { fonts } from '../theme/typography';
+import ScrambleMark from '../components/ScrambleMark';
 import { useAuth } from '../contexts/AuthContext';
 
 type Mode = 'signin' | 'signup';
@@ -72,7 +74,7 @@ export default function AuthScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.hero}>
-            <Text style={styles.heroEmoji}>⛳</Text>
+            <ScrambleMark size={96} />
             <Text style={styles.heroTitle}>Scramble</Text>
             <Text style={styles.heroTagline}>More golf. Better together.</Text>
             <Text style={styles.heroSubtitle}>
@@ -196,32 +198,31 @@ const styles = StyleSheet.create({
   },
   hero: {
     alignItems: 'center',
-    paddingTop: 32,
-    paddingBottom: 24,
-  },
-  heroEmoji: {
-    fontSize: 64,
-    marginBottom: 8,
+    paddingTop: 40,
+    paddingBottom: 28,
   },
   heroTitle: {
-    fontSize: 34,
-    fontWeight: '800',
+    fontFamily: fonts.extrabold,
+    fontSize: 36,
     color: colors.primary,
     letterSpacing: -0.8,
+    marginTop: 12,
   },
   heroTagline: {
+    fontFamily: fonts.semibold,
     fontSize: 15,
-    fontWeight: '600',
     color: colors.ocean,
     marginTop: 4,
     letterSpacing: 0.3,
   },
   heroSubtitle: {
+    fontFamily: fonts.regular,
     fontSize: 14,
     color: colors.textSecondary,
-    marginTop: 10,
+    marginTop: 12,
     textAlign: 'center',
     paddingHorizontal: 32,
+    lineHeight: 20,
   },
   tabRow: {
     flexDirection: 'row',
@@ -246,8 +247,8 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   tabText: {
+    fontFamily: fonts.semibold,
     fontSize: 14,
-    fontWeight: '600',
     color: colors.textSecondary,
   },
   tabTextActive: {
@@ -260,14 +261,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   label: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontFamily: fonts.semibold,
+    fontSize: 12,
     color: colors.textSecondary,
     marginBottom: 6,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
   },
   input: {
+    fontFamily: fonts.regular,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
@@ -300,9 +302,10 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   submitButtonText: {
+    fontFamily: fonts.bold,
     color: colors.white,
-    fontWeight: '700',
     fontSize: 16,
+    letterSpacing: 0.2,
   },
   footnote: {
     fontSize: 12,

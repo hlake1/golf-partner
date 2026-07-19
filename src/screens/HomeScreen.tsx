@@ -13,10 +13,25 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
+import { fonts } from '../theme/typography';
 import { useNearbyPlayers, type NearbyPlayer } from '../hooks/useNearbyPlayers';
+import { useProfile } from '../hooks/useProfile';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import ScrambleMark from '../components/ScrambleMark';
 import PlayerProfileScreen from './PlayerProfileScreen';
+
+function greetingForNow(): string {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 18) return 'Good afternoon';
+  return 'Good evening';
+}
+
+function firstNameOf(fullName: string | undefined | null): string | null {
+  if (!fullName) return null;
+  return fullName.trim().split(/\s+/)[0] || null;
+}
 
 const RADIUS_OPTIONS = [5, 10, 25, 50];
 
@@ -27,6 +42,9 @@ interface Club {
 
 export default function HomeScreen() {
   const { user } = useAuth();
+  const { profile } = useProfile();
+  const firstName = firstNameOf(profile?.full_name);
+  const greeting = greetingForNow();
   const [radiusMiles, setRadiusMiles] = useState(10);
   const [clubFilter, setClubFilter] = useState<Club | null>(null);
   const [clubModalOpen, setClubModalOpen] = useState(false);
@@ -62,11 +80,27 @@ export default function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} />}
       >
-        <View style={styles.header}>
-          <Text style={styles.greeting}>Local players near you</Text>
-          <Text style={styles.subtitle}>
-            Tap a player to invite them to a round
+        {/* Warm welcome header with brand mark */}
+        <View style={styles.welcomeHeader}>
+          <View style={styles.brandRow}>
+            <ScrambleMark size={44} />
+            <View style={styles.brandTextWrap}>
+              <Text style={styles.brandName}>Scramble</Text>
+              <Text style={styles.brandTagline}>More golf. Better together.</Text>
+            </View>
+          </View>
+
+          <Text style={styles.greeting}>
+            {greeting}{firstName ? `, ${firstName}` : ''} 🌿
           </Text>
+          <Text style={styles.subtitle}>
+            Ready to find your next round?
+          </Text>
+        </View>
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Players near you</Text>
+          <Text style={styles.sectionSubtitle}>Tap a card to invite someone</Text>
         </View>
 
         {/* Radius filter */}
@@ -367,17 +401,84 @@ function PlayerCard({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scrollContent: { paddingBottom: 24 },
-  header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
-  greeting: { fontSize: 22, fontWeight: '700', color: colors.text },
-  subtitle: { fontSize: 14, color: colors.textSecondary, marginTop: 4 },
+
+  // Warm welcome header
+  welcomeHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 20,
+    backgroundColor: colors.surface,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    marginBottom: 8,
+  },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  brandTextWrap: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  brandName: {
+    fontFamily: fonts.extrabold,
+    fontSize: 22,
+    color: colors.primary,
+    letterSpacing: -0.5,
+  },
+  brandTagline: {
+    fontFamily: fonts.medium,
+    fontSize: 12,
+    color: colors.ocean,
+    marginTop: 2,
+    letterSpacing: 0.2,
+  },
+  greeting: {
+    fontFamily: fonts.bold,
+    fontSize: 24,
+    color: colors.primary,
+    letterSpacing: -0.4,
+  },
+  subtitle: {
+    fontFamily: fonts.regular,
+    fontSize: 15,
+    color: colors.textSecondary,
+    marginTop: 6,
+    lineHeight: 22,
+  },
+
+  // Section titles between welcome & filters
+  sectionHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 4,
+  },
+  sectionTitle: {
+    fontFamily: fonts.bold,
+    fontSize: 17,
+    color: colors.primary,
+  },
+  sectionSubtitle: {
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+
   filterSection: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4 },
   filterLabel: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontFamily: fonts.semibold,
+    fontSize: 12,
     color: colors.textSecondary,
     marginBottom: 8,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
   },
   filterRow: { flexDirection: 'row', gap: 8 },
   filterChip: {

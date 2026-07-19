@@ -47,7 +47,8 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Scramble uses your location to show nearby golf courses and players."
         }
-      ]
+      ],
+      "expo-font"
     ]
   }
 }

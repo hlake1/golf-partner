@@ -3,7 +3,15 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, View, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors } from '../theme/colors';
+import { fonts } from '../theme/typography';
 import { useNotifications } from '../hooks/useNotifications';
+import {
+  HomeTabIcon,
+  MapTabIcon,
+  CalendarTabIcon,
+  ChatTabIcon,
+  ProfileTabIcon,
+} from '../components/TabIcons';
 
 import HomeScreen from '../screens/HomeScreen';
 import MapScreen from '../screens/MapScreen';
@@ -13,15 +21,6 @@ import ProfileScreen from '../screens/ProfileScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 
 const Tab = createBottomTabNavigator();
-
-// Simple emoji-based tab icons for now.
-function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
-  return (
-    <View style={styles.iconWrap}>
-      <Text style={[styles.icon, focused && styles.iconFocused]}>{emoji}</Text>
-    </View>
-  );
-}
 
 // Header bell icon with unread badge.
 function NotificationBell({ onPress }: { onPress: () => void }) {
@@ -65,8 +64,13 @@ export default function RootNavigator() {
     <NavigationContainer>
       <Tab.Navigator
         screenOptions={{
-          tabBarActiveTintColor: colors.primary,
+          tabBarActiveTintColor: colors.accent, // sage green when focused
           tabBarInactiveTintColor: colors.textMuted,
+          tabBarLabelStyle: {
+            fontFamily: fonts.semibold,
+            fontSize: 11,
+            letterSpacing: 0.2,
+          },
           tabBarStyle: {
             backgroundColor: colors.surface,
             borderTopColor: colors.border,
@@ -79,7 +83,9 @@ export default function RootNavigator() {
           },
           headerTintColor: colors.white,
           headerTitleStyle: {
-            fontWeight: '700',
+            fontFamily: fonts.bold,
+            fontSize: 18,
+            letterSpacing: -0.2,
           },
           headerRight: () => (
             <NotificationBell onPress={() => setNotificationsOpen(true)} />
@@ -91,7 +97,7 @@ export default function RootNavigator() {
           component={HomeScreen}
           options={{
             title: 'Find Players',
-            tabBarIcon: ({ focused }) => <TabIcon emoji="⛳" focused={focused} />,
+            tabBarIcon: ({ color }) => <HomeTabIcon color={color} />,
           }}
         />
         <Tab.Screen
@@ -99,7 +105,7 @@ export default function RootNavigator() {
           component={MapScreen}
           options={{
             title: 'Courses',
-            tabBarIcon: ({ focused }) => <TabIcon emoji="🗺️" focused={focused} />,
+            tabBarIcon: ({ color }) => <MapTabIcon color={color} />,
           }}
         />
         <Tab.Screen
@@ -107,7 +113,7 @@ export default function RootNavigator() {
           component={CalendarScreen}
           options={{
             title: 'Plan a Round',
-            tabBarIcon: ({ focused }) => <TabIcon emoji="📅" focused={focused} />,
+            tabBarIcon: ({ color }) => <CalendarTabIcon color={color} />,
           }}
         />
         <Tab.Screen
@@ -115,7 +121,7 @@ export default function RootNavigator() {
           component={ChatListScreen}
           options={{
             title: 'Messages',
-            tabBarIcon: ({ focused }) => <TabIcon emoji="💬" focused={focused} />,
+            tabBarIcon: ({ color }) => <ChatTabIcon color={color} />,
           }}
         />
         <Tab.Screen
@@ -123,7 +129,7 @@ export default function RootNavigator() {
           component={ProfileScreen}
           options={{
             title: 'My Profile',
-            tabBarIcon: ({ focused }) => <TabIcon emoji="👤" focused={focused} />,
+            tabBarIcon: ({ color }) => <ProfileTabIcon color={color} />,
           }}
         />
       </Tab.Navigator>
@@ -132,18 +138,6 @@ export default function RootNavigator() {
 }
 
 const styles = StyleSheet.create({
-  iconWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  icon: {
-    fontSize: 22,
-    opacity: 0.7,
-  },
-  iconFocused: {
-    opacity: 1,
-    transform: [{ scale: 1.15 }],
-  },
   bellWrap: {
     marginRight: 14,
     paddingHorizontal: 4,
