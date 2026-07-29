@@ -1,18 +1,18 @@
 {
   "expo": {
     "name": "Scramble",
-    "slug": "golf-partner-app",
-    "owner": "golf-partner",
+    "slug": "scramble",
+    "owner": "hlake1",
     "version": "1.0.0",
     "runtimeVersion": {
       "policy": "sdkVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/710082a2-850d-4abe-b583-301e7e398c6d"
+      "url": "https://u.expo.dev/8ea6f930-0e3f-432f-bc33-477fbf6a8ad9"
     },
     "extra": {
       "eas": {
-        "projectId": "710082a2-850d-4abe-b583-301e7e398c6d"
+        "projectId": "8ea6f930-0e3f-432f-bc33-477fbf6a8ad9"
       }
     },
     "orientation": "portrait",
