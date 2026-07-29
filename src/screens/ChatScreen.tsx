@@ -12,7 +12,9 @@ import {
   Image,
   Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useHeaderHeight } from '@react-navigation/elements';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { colors } from '../theme/colors';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -153,12 +155,24 @@ export default function ChatScreen({ friendId, friendName, friendPhoto, onBack }
     [messages]
   );
 
+  // KeyboardAvoidingView needs to know the height of anything ABOVE our screen
+  // (the parent Tab navigator's header) so it can compute the correct amount
+  // of padding to lift the composer above the keyboard.
+  const headerHeight = useHeaderHeight();
+  // ...and the height of anything BELOW our screen (the bottom tab bar). We
+  // pad the composer by tabBarHeight so it sits above the tab bar when the
+  // keyboard is closed. When the keyboard opens, iOS raises the whole tree
+  // above the keyboard so the tab bar goes off-screen anyway — the padding
+  // then just becomes visual breathing room above the keyboard.
+  const tabBarHeight = useBottomTabBarHeight();
+  const insets = useSafeAreaInsets();
+
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={0}
+        keyboardVerticalOffset={headerHeight}
       >
         {/* Header */}
         <View style={styles.header}>
@@ -211,7 +225,18 @@ export default function ChatScreen({ friendId, friendName, friendPhoto, onBack }
           />
         )}
 
-        <View style={styles.composer}>
+        <View
+          style={[
+            styles.composer,
+            {
+              // When the keyboard is CLOSED, this padding keeps the composer
+              // above the tab bar + home-indicator safe area. When the
+              // keyboard is OPEN, KeyboardAvoidingView lifts the whole tree so
+              // this padding just becomes the visual bottom breathing room.
+              paddingBottom: Math.max(insets.bottom, 10) + tabBarHeight,
+            },
+          ]}
+        >
           <TextInput
             style={styles.input}
             value={draft}
