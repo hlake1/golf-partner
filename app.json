@@ -1,8 +1,20 @@
 {
   "expo": {
     "name": "Scramble",
-    "slug": "scramble",
+    "slug": "golf-partner-app",
+    "owner": "golf-partner",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/710082a2-850d-4abe-b583-301e7e398c6d"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "710082a2-850d-4abe-b583-301e7e398c6d"
+      }
+    },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",

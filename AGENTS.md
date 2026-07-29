@@ -26,11 +26,27 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
 
 ## EAS Update URL (permanent, stable)
 
+**Current project** (as of 2026-07-29): `@golf-partner/golf-partner-app`
+- Project ID: `710082a2-850d-4abe-b583-301e7e398c6d`
+- Account: `golf-partner` (Organization)
+- Old project ID `8ea6f930-0e3f-432f-bc33-477fbf6a8ad9` was under `hlake1` personal account — no longer used.
+
 ```
-exp://u.expo.dev/8ea6f930-0e3f-432f-bc33-477fbf6a8ad9?channel-name=preview&runtime-version=exposdk%3A54.0.0
+exp://u.expo.dev/710082a2-850d-4abe-b583-301e7e398c6d?channel-name=preview&runtime-version=exposdk%3A54.0.0
 ```
 
 QR command:
 ```
-npx qrcode-terminal "exp://u.expo.dev/8ea6f930-0e3f-432f-bc33-477fbf6a8ad9?channel-name=preview&runtime-version=exposdk%3A54.0.0"
+npx qrcode-terminal "exp://u.expo.dev/710082a2-850d-4abe-b583-301e7e398c6d?channel-name=preview&runtime-version=exposdk%3A54.0.0"
+```
+
+## Pushing updates from OpenClaw workspace
+
+**Auth:** Robot token `Oliver-Openclaw` (Admin role on `golf-partner` account) — set as `EXPO_TOKEN` env var when running `eas`.
+
+**OOM gotcha:** Container has 4GB cgroup limit. `eas update` without `--platform` flag builds BOTH iOS and Android bundles and hits OOM during asset processing. Fix: push one platform at a time with `--platform ios` or `--platform android`, and set `NODE_OPTIONS="--max-old-space-size=3072"`.
+
+```bash
+EXPO_TOKEN='...' NODE_OPTIONS="--max-old-space-size=3072" \
+  eas update --branch preview --message "..." --platform ios --non-interactive
 ```
