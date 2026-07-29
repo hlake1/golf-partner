@@ -40,7 +40,7 @@ export default function ChatScreen({ friendId, friendName, friendPhoto, onBack }
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
-  const listRef = useRef<FlatList<Message>>(null);
+  const listRef = useRef<FlatList<ListItem>>(null);
 
   // Set up conversation + subscription
   useEffect(() => {
@@ -146,12 +146,19 @@ export default function ChatScreen({ friendId, friendName, friendPhoto, onBack }
     // but for local snappiness we could also insert optimistically. Skipping for now.
   }
 
+  // Interleave date separators with messages so the FlatList can render both
+  // (see DateSeparator + isDateSeparator below).
+  const listItems = React.useMemo(
+    () => buildMessageListItems(messages),
+    [messages]
+  );
+
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
       >
         {/* Header */}
         <View style={styles.header}>
@@ -182,11 +189,15 @@ export default function ChatScreen({ friendId, friendName, friendPhoto, onBack }
         ) : (
           <FlatList
             ref={listRef}
-            data={messages}
-            keyExtractor={(m) => m.id}
-            renderItem={({ item }) => (
-              <MessageBubble message={item} isMine={item.sender_id === user?.id} />
-            )}
+            data={listItems}
+            keyExtractor={(item) => (isDateSeparator(item) ? `d-${item.dayKey}` : item.id)}
+            renderItem={({ item }) =>
+              isDateSeparator(item) ? (
+                <DateSeparator label={item.label} />
+              ) : (
+                <MessageBubble message={item} isMine={item.sender_id === user?.id} />
+              )
+            }
             contentContainerStyle={styles.messagesList}
             onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
             ListEmptyComponent={
@@ -227,6 +238,76 @@ export default function ChatScreen({ friendId, friendName, friendPhoto, onBack }
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
+  );
+}
+
+// -----------------------------------------------------------------------------
+// Date separators
+// -----------------------------------------------------------------------------
+
+type DateSeparatorItem = { __sep: true; dayKey: string; label: string };
+type ListItem = Message | DateSeparatorItem;
+
+function isDateSeparator(item: ListItem): item is DateSeparatorItem {
+  return (item as DateSeparatorItem).__sep === true;
+}
+
+function dayKey(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+function formatDayLabel(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const isSameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+
+  if (isSameDay(d, now)) return 'Today';
+  if (isSameDay(d, yesterday)) return 'Yesterday';
+
+  // Within the last week: show the weekday name (Monday, Tuesday, ...)
+  const diffMs = now.getTime() - d.getTime();
+  const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
+  if (diffMs < oneWeekMs) {
+    return d.toLocaleDateString('en-GB', { weekday: 'long' });
+  }
+
+  // Same year: e.g. "12 July"; otherwise full date "12 July 2025"
+  const sameYear = d.getFullYear() === now.getFullYear();
+  return d.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    ...(sameYear ? {} : { year: 'numeric' }),
+  });
+}
+
+function buildMessageListItems(messages: Message[]): ListItem[] {
+  const out: ListItem[] = [];
+  let currentDay: string | null = null;
+  for (const m of messages) {
+    const k = dayKey(m.created_at);
+    if (k !== currentDay) {
+      out.push({ __sep: true, dayKey: k, label: formatDayLabel(m.created_at) });
+      currentDay = k;
+    }
+    out.push(m);
+  }
+  return out;
+}
+
+function DateSeparator({ label }: { label: string }) {
+  return (
+    <View style={styles.dateSeparatorRow}>
+      <View style={styles.dateSeparatorLine} />
+      <Text style={styles.dateSeparatorText}>{label}</Text>
+      <View style={styles.dateSeparatorLine} />
+    </View>
   );
 }
 
@@ -354,4 +435,23 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: { opacity: 0.4 },
   sendButtonText: { color: colors.white, fontWeight: '700', fontSize: 14 },
+  dateSeparatorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 14,
+    paddingHorizontal: 8,
+    gap: 10,
+  },
+  dateSeparatorLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+  },
+  dateSeparatorText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textMuted,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
 });
