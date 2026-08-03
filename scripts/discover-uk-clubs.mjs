@@ -109,6 +109,21 @@ async function textSearch(query, pageToken = null) {
   const res = await fetch(url);
   const data = await res.json();
   if (data.status === 'ZERO_RESULTS') return { results: [], nextPageToken: null };
+  // On paginated calls, INVALID_REQUEST usually means "token not ready yet."
+  // Retry once with a longer sleep before giving up.
+  if (pageToken && data.status === 'INVALID_REQUEST') {
+    await new Promise((r) => setTimeout(r, 3000));
+    const retryRes = await fetch(url);
+    const retryData = await retryRes.json();
+    if (retryData.status === 'OK') {
+      return {
+        results: retryData.results ?? [],
+        nextPageToken: retryData.next_page_token ?? null,
+      };
+    }
+    // Give up on this page but don't throw — page 1 results are still good.
+    return { results: [], nextPageToken: null };
+  }
   if (data.status !== 'OK') {
     throw new Error(`Places API status=${data.status} error=${data.error_message ?? ''}`);
   }
@@ -124,11 +139,20 @@ async function searchRegion(area) {
   let pageToken = null;
   let page = 0;
   do {
-    // Google requires a small delay before next_page_token becomes valid
-    if (pageToken) await new Promise((r) => setTimeout(r, 2000));
-    const { results, nextPageToken } = await textSearch(query, pageToken);
-    all.push(...results);
-    pageToken = nextPageToken;
+    // Google requires a delay before next_page_token becomes valid — 3s is
+    // usually enough. textSearch() retries once with an additional 3s if it
+    // still fails.
+    if (pageToken) await new Promise((r) => setTimeout(r, 3000));
+    try {
+      const { results, nextPageToken } = await textSearch(query, pageToken);
+      all.push(...results);
+      pageToken = nextPageToken;
+    } catch (e) {
+      // Only page 1 failures reach here (paginated failures return empty).
+      // Log and stop paging for this region.
+      console.log(`    ⚠️  ${area} page ${page + 1}: ${e.message}`);
+      pageToken = null;
+    }
     page++;
   } while (pageToken && page < 3);
   return { area, results: all };
@@ -267,84 +291,25 @@ async function main() {
     return;
   }
 
-  // Insert new clubs. We need to set location as geography(POINT), which
-  // supabase-js doesn't do natively — we call an RPC per row.
-  // For efficiency, chunk into batches and use the SQL API.
-  const BATCH = 50;
+  // Insert new clubs one at a time via a plpgsql RPC that sets location
+  // atomically. Small perf hit vs. bulk insert, but safe and correct.
   let inserted = 0;
-  for (let i = 0; i < toInsert.length; i += BATCH) {
-    const chunk = toInsert.slice(i, i + BATCH);
-
-    // Build a raw SQL insert to set geography properly.
-    const values = chunk
-      .map((c) => {
-        const nm = c.name.replace(/'/g, "''");
-        const addr = c.address ? `'${c.address.replace(/'/g, "''")}'` : 'null';
-        const country = `'${c.country.replace(/'/g, "''")}'`;
-        const placeId = `'${c.google_place_id}'`;
-        const rating = c.rating ?? 'null';
-        const ratingCount = c.rating_count ?? 'null';
-        return `('${nm}', ${addr}, ${country}, st_makepoint(${c._lng}, ${c._lat})::geography, ${placeId}, ${rating}, ${ratingCount})`;
-      })
-      .join(',\n  ');
-
-    const sql = `
-      insert into public.clubs (name, address, country, location, google_place_id, rating, rating_count)
-      values
-        ${values}
-      on conflict (google_place_id) do nothing;
-    `;
-
-    let error = null;
-    try {
-      const r = await supabase.rpc('exec_sql', { sql });
-      error = r.error;
-    } catch (e) {
-      error = e;
-    }
-
-    // Almost always we won't have an exec_sql RPC, so fall through to the
-    // per-row supabase-js path below.
-    const errMsg = error ? String(error.message ?? error) : '';
-    const isMissingRpc =
-      errMsg.includes('exec_sql') ||
-      errMsg.includes('function public.exec_sql') ||
-      errMsg.includes('Could not find the function');
-
-    if (error && !isMissingRpc) {
-      console.log(`  ❌ Insert failed: ${errMsg}`);
-      continue;
-    }
+  for (const c of toInsert) {
+    const { error } = await supabase.rpc('insert_club_with_location', {
+      club_name: c.name,
+      club_address: c.address,
+      club_country: c.country,
+      club_google_place_id: c.google_place_id,
+      club_rating: c.rating,
+      club_rating_count: c.rating_count,
+      club_lng: c._lng,
+      club_lat: c._lat,
+    });
     if (error) {
-      // Fallback: use per-row insert via supabase-js (no geography)
-      for (const c of chunk) {
-        const { data, error: insErr } = await supabase
-          .from('clubs')
-          .insert({
-            name: c.name,
-            address: c.address,
-            country: c.country,
-            google_place_id: c.google_place_id,
-            rating: c.rating,
-            rating_count: c.rating_count,
-          })
-          .select('id')
-          .single();
-        if (insErr) {
-          console.log(`  ❌ Insert ${c.name}: ${insErr.message}`);
-          continue;
-        }
-        // Update location via RPC (see migration for set_club_location).
-        await supabase.rpc('set_club_location', {
-          club_id: data.id,
-          lng: c._lng,
-          lat: c._lat,
-        });
-        inserted++;
-      }
+      console.log(`  ❌ Insert ${c.name}: ${error.message}`);
       continue;
     }
-    inserted += chunk.length;
+    inserted++;
   }
 
   // Link legacy clubs (those we seeded manually) to their place_id so the
