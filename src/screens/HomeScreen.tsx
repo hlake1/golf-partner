@@ -257,6 +257,17 @@ export default function HomeScreen() {
     )[0];
   }, [myRounds]);
 
+  // Load clubs for the filter modal (once) — MUST run before any early
+  // returns below, otherwise React sees a different number of hooks between
+  // renders and crashes the tree (white screen).
+  useEffect(() => {
+    supabase
+      .from('clubs')
+      .select('id, name')
+      .order('name')
+      .then(({ data }) => setAllClubs(data ?? []));
+  }, []);
+
   if (openProfileId) {
     return (
       <PlayerProfileScreen
@@ -276,19 +287,16 @@ export default function HomeScreen() {
         onBack={() => setShowPlayersList(false)}
         onOpenProfile={(id) => setOpenProfileId(id)}
         radiusMiles={radiusMiles}
+        setRadiusMiles={setRadiusMiles}
         clubFilter={clubFilter}
+        setClubFilter={setClubFilter}
+        onOpenClubModal={() => setClubModalOpen(true)}
+        allClubs={allClubs}
+        clubModalOpen={clubModalOpen}
+        closeClubModal={() => setClubModalOpen(false)}
       />
     );
   }
-
-  // Load clubs for the filter modal (once)
-  useEffect(() => {
-    supabase
-      .from('clubs')
-      .select('id, name')
-      .order('name')
-      .then(({ data }) => setAllClubs(data ?? []));
-  }, []);
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
@@ -830,7 +838,13 @@ function PlayersListScreen({
   onBack,
   onOpenProfile,
   radiusMiles,
+  setRadiusMiles,
   clubFilter,
+  setClubFilter,
+  onOpenClubModal,
+  allClubs,
+  clubModalOpen,
+  closeClubModal,
 }: {
   players: NearbyPlayer[];
   loading: boolean;
@@ -839,55 +853,185 @@ function PlayersListScreen({
   onBack: () => void;
   onOpenProfile: (id: string) => void;
   radiusMiles: number;
+  setRadiusMiles: (r: number) => void;
   clubFilter: Club | null;
+  setClubFilter: (c: Club | null) => void;
+  onOpenClubModal: () => void;
+  allClubs: Club[];
+  clubModalOpen: boolean;
+  closeClubModal: () => void;
 }) {
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'top']}>
+      {/* Header */}
       <View style={styles.fullListHeader}>
         <TouchableOpacity onPress={onBack} hitSlop={10}>
           <Text style={styles.fullListBackChevron}>‹</Text>
         </TouchableOpacity>
         <Text style={styles.fullListTitle}>Find Players</Text>
       </View>
-      <Text style={styles.fullListSubtitle}>
-        {players.length} golfer{players.length === 1 ? '' : 's'} within {radiusMiles} mi
-        {clubFilter ? ` at ${clubFilter.name}` : ''}
-      </Text>
+
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: 40, gap: 12 }}
+        contentContainerStyle={{ paddingBottom: 40 }}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} />}
       >
-        {error ? (
-          <View style={styles.errorState}>
-            <Text style={styles.errorEmoji}>😕</Text>
-            <Text style={styles.errorTitle}>Couldn't load players</Text>
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={onRefresh}>
-              <Text style={styles.retryText}>Try again</Text>
+        {/* Landing hero */}
+        <View style={styles.landingHero}>
+          <View style={styles.landingHeroTop}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.landingHeroTitle}>Golfers near you</Text>
+              <Text style={styles.landingHeroSubtitle}>
+                Tap any card to view a player or invite them to a round.
+              </Text>
+            </View>
+            <View style={styles.playersCountBadge}>
+              <Text style={styles.playersCountBadgeText}>
+                {players.length}
+              </Text>
+              <Text style={styles.playersCountBadgeLabel}>found</Text>
+            </View>
+          </View>
+
+          {/* Radius filter */}
+          <Text style={styles.landingFilterLabel}>Search radius</Text>
+          <View style={styles.filterRow}>
+            {RADIUS_OPTIONS.map((r) => (
+              <TouchableOpacity
+                key={r}
+                style={[
+                  styles.filterChip,
+                  radiusMiles === r && styles.filterChipActive,
+                ]}
+                onPress={() => setRadiusMiles(r)}
+              >
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    radiusMiles === r && styles.filterChipTextActive,
+                  ]}
+                >
+                  {r} mi
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Club filter */}
+          <Text style={styles.landingFilterLabel}>Club</Text>
+          <View style={styles.clubFilterRow}>
+            <TouchableOpacity
+              style={[styles.clubFilterChip, !clubFilter && styles.filterChipActive]}
+              onPress={() => setClubFilter(null)}
+            >
+              <Text
+                style={[
+                  styles.filterChipText,
+                  !clubFilter && styles.filterChipTextActive,
+                ]}
+              >
+                All clubs
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.clubFilterChip, clubFilter && styles.filterChipActive]}
+              onPress={onOpenClubModal}
+            >
+              <Text
+                style={[
+                  styles.filterChipText,
+                  clubFilter && styles.filterChipTextActive,
+                ]}
+                numberOfLines={1}
+              >
+                {clubFilter ? `⛳ ${clubFilter.name}` : 'Filter by club'}
+              </Text>
             </TouchableOpacity>
           </View>
-        ) : loading && players.length === 0 ? (
-          <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
-        ) : players.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyEmoji}>⛳</Text>
-            <Text style={styles.emptyTitle}>No players nearby</Text>
-            <Text style={styles.emptyText}>
-              {clubFilter
-                ? `No golfers at ${clubFilter.name} within ${radiusMiles} miles.`
-                : `Try widening your search radius, or check back later.`}
-            </Text>
-          </View>
-        ) : (
-          players.map((player) => (
-            <PlayerCard
-              key={player.id}
-              player={player}
-              onOpenProfile={() => onOpenProfile(player.id)}
-            />
-          ))
-        )}
+        </View>
+
+        {/* Results */}
+        <View style={{ paddingHorizontal: 20, gap: 12 }}>
+          {error ? (
+            <View style={styles.errorState}>
+              <Text style={styles.errorEmoji}>😕</Text>
+              <Text style={styles.errorTitle}>Couldn't load players</Text>
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity style={styles.retryButton} onPress={onRefresh}>
+                <Text style={styles.retryText}>Try again</Text>
+              </TouchableOpacity>
+            </View>
+          ) : loading && players.length === 0 ? (
+            <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
+          ) : players.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyEmoji}>⛳</Text>
+              <Text style={styles.emptyTitle}>No players nearby</Text>
+              <Text style={styles.emptyText}>
+                {clubFilter
+                  ? `No golfers at ${clubFilter.name} within ${radiusMiles} miles.`
+                  : `Try widening your search radius, or check back later.`}
+              </Text>
+            </View>
+          ) : (
+            players.map((player) => (
+              <PlayerCard
+                key={player.id}
+                player={player}
+                onOpenProfile={() => onOpenProfile(player.id)}
+              />
+            ))
+          )}
+        </View>
       </ScrollView>
+
+      {/* Club filter modal (mirrors the one on Home so filters work here too) */}
+      <Modal
+        visible={clubModalOpen}
+        animationType="slide"
+        onRequestClose={closeClubModal}
+      >
+        <SafeAreaView style={styles.container}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={closeClubModal}>
+              <Text style={styles.modalCancel} numberOfLines={1}>
+                Cancel
+              </Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Filter by Club</Text>
+            <View style={{ width: 60 }} />
+          </View>
+          <ScrollView contentContainerStyle={{ padding: 16 }}>
+            <TouchableOpacity
+              style={styles.clubOption}
+              onPress={() => {
+                setClubFilter(null);
+                closeClubModal();
+              }}
+            >
+              <Text style={styles.clubOptionName}>All clubs</Text>
+              {!clubFilter && <Text style={styles.clubOptionCheck}>✓</Text>}
+            </TouchableOpacity>
+            {allClubs.map((c) => (
+              <TouchableOpacity
+                key={c.id}
+                style={[
+                  styles.clubOption,
+                  clubFilter?.id === c.id && styles.clubOptionActive,
+                ]}
+                onPress={() => {
+                  setClubFilter(c);
+                  closeClubModal();
+                }}
+              >
+                <Text style={styles.clubOptionName}>⛳ {c.name}</Text>
+                {clubFilter?.id === c.id && (
+                  <Text style={styles.clubOptionCheck}>✓</Text>
+                )}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1358,6 +1502,47 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 4,
+  },
+  // Landing hero on PlayersListScreen
+  landingHero: {
+    marginHorizontal: 20,
+    marginTop: 16,
+    marginBottom: 20,
+    backgroundColor: colors.surface,
+    borderRadius: 22,
+    padding: 18,
+    shadowColor: '#0F1622',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 4,
+  },
+  landingHeroTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 14,
+  },
+  landingHeroTitle: {
+    fontFamily: fonts.bold,
+    fontSize: 22,
+    color: colors.primary,
+    letterSpacing: -0.3,
+  },
+  landingHeroSubtitle: {
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 4,
+  },
+  landingFilterLabel: {
+    fontFamily: fonts.semibold,
+    fontSize: 11,
+    color: colors.textMuted,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    marginTop: 8,
+    marginBottom: 6,
   },
 
   filterSection: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 },
