@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import type { MyRound } from '../hooks/useMyRounds';
 
@@ -17,6 +17,7 @@ interface Props {
 }
 
 export default function RoundDetailScreen({ round, onBack }: Props) {
+  const insets = useSafeAreaInsets();
   const date = new Date(round.scheduled_for);
   const dateText = date.toLocaleDateString('en-GB', {
     weekday: 'long',
@@ -33,10 +34,10 @@ export default function RoundDetailScreen({ round, onBack }: Props) {
   const filled = round.accepted_players.length + 1;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack}>
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+      {/* Header — background extends up to the notch, but content sits below it */}
+      <View style={[styles.header, { paddingTop: 12 + insets.top }]}>
+        <TouchableOpacity onPress={onBack} hitSlop={10}>
           <Text style={styles.backChevron}>‹</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Round details</Text>
@@ -158,7 +159,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingBottom: 12,
+    // paddingTop is set inline (12 + safe-area top inset) so the header
+    // background extends up to the notch but the buttons sit clear of it.
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
     backgroundColor: colors.surface,

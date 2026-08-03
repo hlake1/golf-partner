@@ -10,8 +10,9 @@ import {
   Modal,
   Platform,
   Alert,
+  KeyboardAvoidingView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { colors } from '../theme/colors';
 import { supabase } from '../lib/supabase';
@@ -39,6 +40,7 @@ export default function CreateRoundScreen({
   prefillDate,
 }: Props) {
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const [clubs, setClubs] = useState<Club[]>([]);
   const [clubsLoading, setClubsLoading] = useState(true);
   const [clubModal, setClubModal] = useState(false);
@@ -138,9 +140,14 @@ export default function CreateRoundScreen({
   });
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onCancel}>
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={0}
+      >
+      <View style={[styles.header, { paddingTop: 12 + insets.top }]}>
+        <TouchableOpacity onPress={onCancel} hitSlop={12}>
           <Text style={styles.cancelText} numberOfLines={1}>
             Cancel
           </Text>
@@ -149,7 +156,11 @@ export default function CreateRoundScreen({
         <View style={{ width: 60 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
         {/* Club picker */}
         <View style={styles.field}>
           <Text style={styles.label}>Golf club</Text>
@@ -294,6 +305,7 @@ export default function CreateRoundScreen({
           )}
         </TouchableOpacity>
       </View>
+      </KeyboardAvoidingView>
 
       {/* Club selection modal */}
       <Modal visible={clubModal} animationType="slide" onRequestClose={() => setClubModal(false)}>
@@ -375,9 +387,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 16,
     paddingBottom: 12,
     minHeight: 56,
+    // paddingTop is applied inline (12 + safe-area top) so the coloured
+    // header extends up to the notch — no ugly white gap above.
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
     backgroundColor: colors.surface,

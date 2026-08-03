@@ -46,7 +46,7 @@ export default function CalendarScreen() {
   const [prefill, setPrefill] = useState<{ clubId?: string | null; date?: string | null }>({});
   const [requestingId, setRequestingId] = useState<string | null>(null);
   const [actioningId, setActioningId] = useState<string | null>(null);
-  const [mode, setMode] = useState<Mode>('schedule');
+  const [mode, setMode] = useState<Mode>('discover');
 
   const route = useRoute();
   const navigation = useNavigation<any>();
@@ -191,19 +191,19 @@ export default function CalendarScreen() {
       {/* Segment control at the very top */}
       <View style={styles.segmentBar}>
         <TouchableOpacity
-          style={[styles.segment, mode === 'schedule' && styles.segmentActive]}
-          onPress={() => setMode('schedule')}
-        >
-          <Text style={[styles.segmentText, mode === 'schedule' && styles.segmentTextActive]}>
-            My Schedule
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
           style={[styles.segment, mode === 'discover' && styles.segmentActive]}
           onPress={() => setMode('discover')}
         >
           <Text style={[styles.segmentText, mode === 'discover' && styles.segmentTextActive]}>
             Discover
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.segment, mode === 'schedule' && styles.segmentActive]}
+          onPress={() => setMode('schedule')}
+        >
+          <Text style={[styles.segmentText, mode === 'schedule' && styles.segmentTextActive]}>
+            My Schedule
           </Text>
         </TouchableOpacity>
       </View>

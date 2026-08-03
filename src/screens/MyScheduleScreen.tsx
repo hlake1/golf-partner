@@ -34,29 +34,67 @@ export default function MyScheduleScreen({ onPostRoundForDate }: Props = {}) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [openRound, setOpenRound] = useState<MyRound | null>(null);
 
-  // Compute markedDates: dot per day the user has a round
+  // Compute markedDates: highlight WHOLE day for hosting / playing rounds.
+  // Uses markingType="custom" so we can render a full circular background
+  // behind the date number instead of a tiny dot underneath.
   const markedDates = useMemo(() => {
-    const marks: Record<
-      string,
-      { dots?: { color: string; key: string }[]; selected?: boolean; selectedColor?: string }
-    > = {};
-
+    // Track roles per day so we can pick the fill colour if both apply.
+    const rolesByDate: Record<string, Set<'host' | 'player'>> = {};
     for (const r of rounds) {
-      const key = r.local_date;
-      const dotColor = r.role === 'host' ? colors.primary : colors.accent;
-      const existing = marks[key];
-      if (!existing) {
-        marks[key] = { dots: [{ color: dotColor, key: r.role }] };
-      } else if (existing.dots && !existing.dots.find((d) => d.key === r.role)) {
-        existing.dots.push({ color: dotColor, key: r.role });
+      const day = r.local_date;
+      const role = (r.role === 'host' ? 'host' : 'player') as 'host' | 'player';
+      if (!rolesByDate[day]) rolesByDate[day] = new Set();
+      rolesByDate[day].add(role);
+    }
+
+    const marks: Record<string, any> = {};
+    for (const [day, roles] of Object.entries(rolesByDate)) {
+      const isHost = roles.has('host');
+      const isPlayer = roles.has('player');
+      // Both host + player on same day → blend/prioritise host (you’re running it).
+      const fill = isHost ? colors.primary : colors.accent;
+      const textColor = colors.white;
+      marks[day] = {
+        customStyles: {
+          container: {
+            backgroundColor: fill,
+            borderRadius: 18,
+          },
+          text: {
+            color: textColor,
+            fontWeight: '700',
+          },
+        },
+      };
+      // If both roles, add a small accent border on the ring so you can tell.
+      if (isHost && isPlayer) {
+        marks[day].customStyles.container = {
+          ...marks[day].customStyles.container,
+          borderWidth: 2,
+          borderColor: colors.accent,
+        };
       }
     }
 
+    // Overlay the currently selected date so tapping still gives feedback.
     if (selectedDate) {
+      const existing = marks[selectedDate] ?? { customStyles: {} };
       marks[selectedDate] = {
-        ...(marks[selectedDate] ?? {}),
-        selected: true,
-        selectedColor: colors.primary,
+        ...existing,
+        customStyles: {
+          container: {
+            ...(existing.customStyles?.container ?? {}),
+            backgroundColor:
+              existing.customStyles?.container?.backgroundColor ?? colors.primary,
+            borderRadius: 18,
+            borderWidth: 2,
+            borderColor: colors.text,
+          },
+          text: {
+            color: colors.white,
+            fontWeight: '800',
+          },
+        },
       };
     }
 
@@ -89,7 +127,7 @@ export default function MyScheduleScreen({ onPostRoundForDate }: Props = {}) {
 
         <View style={styles.calendarWrap}>
           <Calendar
-            markingType="multi-dot"
+            markingType="custom"
             markedDates={markedDates}
             firstDay={1} // Monday start (UK)
             onDayPress={(d: DateData) => {
@@ -118,12 +156,25 @@ export default function MyScheduleScreen({ onPostRoundForDate }: Props = {}) {
         {/* Legend */}
         <View style={styles.legend}>
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
+            <View style={[styles.legendPill, { backgroundColor: colors.primary }]} />
             <Text style={styles.legendText}>Hosting</Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: colors.accent }]} />
+            <View style={[styles.legendPill, { backgroundColor: colors.accent }]} />
             <Text style={styles.legendText}>Playing</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View
+              style={[
+                styles.legendPill,
+                {
+                  backgroundColor: colors.primary,
+                  borderWidth: 2,
+                  borderColor: colors.accent,
+                },
+              ]}
+            />
+            <Text style={styles.legendText}>Both</Text>
           </View>
         </View>
 
@@ -250,6 +301,7 @@ const styles = StyleSheet.create({
   },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
+  legendPill: { width: 18, height: 18, borderRadius: 9 },
   legendText: { fontSize: 12, color: colors.textSecondary, fontWeight: '600' },
   agendaHeader: {
     flexDirection: 'row',
