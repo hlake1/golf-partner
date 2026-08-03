@@ -240,6 +240,7 @@ export default function HomeScreen() {
   const [clubModalOpen, setClubModalOpen] = useState(false);
   const [allClubs, setAllClubs] = useState<Club[]>([]);
   const [openProfileId, setOpenProfileId] = useState<string | null>(null);
+  const [showPlayersList, setShowPlayersList] = useState(false);
 
   const { players, loading, error, refresh } = useNearbyPlayers({
     radiusMiles,
@@ -261,6 +262,21 @@ export default function HomeScreen() {
       <PlayerProfileScreen
         userId={openProfileId}
         onBack={() => setOpenProfileId(null)}
+      />
+    );
+  }
+
+  if (showPlayersList) {
+    return (
+      <PlayersListScreen
+        players={players}
+        loading={loading}
+        error={error}
+        onRefresh={refresh}
+        onBack={() => setShowPlayersList(false)}
+        onOpenProfile={(id) => setOpenProfileId(id)}
+        radiusMiles={radiusMiles}
+        clubFilter={clubFilter}
       />
     );
   }
@@ -294,103 +310,73 @@ export default function HomeScreen() {
           <Text style={styles.subGreeting}>Ready to play?</Text>
         </View>
 
-        {/* ===== 🏆 HERO 1: Players Near You (matching 3D card look) ===== */}
-        <View style={[styles.playersHero, styles.cardShadow]}>
+        {/* ===== 🏆 HERO 1: Find Players — compact preview, tap to browse ===== */}
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => setShowPlayersList(true)}
+          style={[styles.playersHero, styles.cardShadow]}
+        >
           <View style={styles.playersHeroHeader}>
-            <Text style={styles.playersHeroTitle}>Find Players</Text>
-            <Text style={styles.playersHeroSubtitle}>
-              Golfers near you — tap a card to invite them for a round
-            </Text>
-          </View>
-
-          {/* Radius filter */}
-          <View style={styles.filterRow}>
-            {RADIUS_OPTIONS.map((r) => (
-              <TouchableOpacity
-                key={r}
-                style={[
-                  styles.filterChip,
-                  radiusMiles === r && styles.filterChipActive,
-                ]}
-                onPress={() => setRadiusMiles(r)}
-              >
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    radiusMiles === r && styles.filterChipTextActive,
-                  ]}
-                >
-                  {r} mi
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Club filter */}
-          <View style={styles.clubFilterRow}>
-            <TouchableOpacity
-              style={[styles.clubFilterChip, !clubFilter && styles.filterChipActive]}
-              onPress={() => setClubFilter(null)}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  !clubFilter && styles.filterChipTextActive,
-                ]}
-              >
-                All clubs
+            <View style={{ flex: 1 }}>
+              <Text style={styles.playersHeroTitle}>Find Players</Text>
+              <Text style={styles.playersHeroSubtitle}>
+                Tap to browse golfers near you
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.clubFilterChip, clubFilter && styles.filterChipActive]}
-              onPress={() => setClubModalOpen(true)}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  clubFilter && styles.filterChipTextActive,
-                ]}
-                numberOfLines={1}
-              >
-                {clubFilter ? `⛳ ${clubFilter.name}` : 'Filter by club'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Player results */}
-          {error ? (
-            <View style={styles.errorState}>
-              <Text style={styles.errorEmoji}>😕</Text>
-              <Text style={styles.errorTitle}>Couldn't load players</Text>
-              <Text style={styles.errorText}>{error}</Text>
-              <TouchableOpacity style={styles.retryButton} onPress={refresh}>
-                <Text style={styles.retryText}>Try again</Text>
-              </TouchableOpacity>
             </View>
-          ) : loading && players.length === 0 ? (
-            <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
+            {/* Red count badge */}
+            {!loading && !error && players.length > 0 && (
+              <View style={styles.playersCountBadge}>
+                <Text style={styles.playersCountBadgeText}>
+                  {players.length}
+                </Text>
+                <Text style={styles.playersCountBadgeLabel}>nearby</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Compact avatar preview strip */}
+          {loading && players.length === 0 ? (
+            <ActivityIndicator color={colors.primary} style={{ marginVertical: 18 }} />
+          ) : error ? (
+            <View style={styles.playersPreviewEmpty}>
+              <Text style={styles.playersPreviewEmptyText}>
+                😕 Couldn't load players — tap to retry
+              </Text>
+            </View>
           ) : players.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyEmoji}>⛳</Text>
-              <Text style={styles.emptyTitle}>No players nearby</Text>
-              <Text style={styles.emptyText}>
-                {clubFilter
-                  ? `No golfers at ${clubFilter.name} within ${radiusMiles} miles.`
-                  : `Try widening your search radius, or check back later.`}
+            <View style={styles.playersPreviewEmpty}>
+              <Text style={styles.playersPreviewEmptyText}>
+                ⛳ No golfers within {radiusMiles} mi{clubFilter ? ` at ${clubFilter.name}` : ''}
+              </Text>
+              <Text style={styles.playersPreviewEmptyHint}>
+                Tap to change filters
               </Text>
             </View>
           ) : (
-            <View style={styles.playerList}>
-              {players.map((player) => (
-                <PlayerCard
-                  key={player.id}
-                  player={player}
-                  onOpenProfile={() => setOpenProfileId(player.id)}
-                />
-              ))}
+            <View style={styles.avatarPreviewRow}>
+              <View style={styles.avatarPreviewStack}>
+                {players.slice(0, 6).map((p, i) => (
+                  <MiniAvatar
+                    key={p.id}
+                    url={p.photo_url ?? null}
+                    name={p.full_name}
+                    index={i}
+                  />
+                ))}
+                {players.length > 6 && (
+                  <View style={[styles.miniAvatarWrap, { marginLeft: -10 }]}>
+                    <View style={[styles.miniAvatar, styles.miniAvatarMore]}>
+                      <Text style={styles.miniAvatarMoreText}>
+                        +{players.length - 6}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.avatarPreviewCta}>View all →</Text>
             </View>
           )}
-        </View>
+        </TouchableOpacity>
 
         {/* ===== 🏆 HERO 2: Post a Round (tappable → Plan a Round) ===== */}
         <NextRoundCard
@@ -835,6 +821,77 @@ function PlayerCard({
   );
 }
 
+// ---------- Players list (full screen when you tap the compact card) ----------
+function PlayersListScreen({
+  players,
+  loading,
+  error,
+  onRefresh,
+  onBack,
+  onOpenProfile,
+  radiusMiles,
+  clubFilter,
+}: {
+  players: NearbyPlayer[];
+  loading: boolean;
+  error: string | null;
+  onRefresh: () => void;
+  onBack: () => void;
+  onOpenProfile: (id: string) => void;
+  radiusMiles: number;
+  clubFilter: Club | null;
+}) {
+  return (
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'top']}>
+      <View style={styles.fullListHeader}>
+        <TouchableOpacity onPress={onBack} hitSlop={10}>
+          <Text style={styles.fullListBackChevron}>‹</Text>
+        </TouchableOpacity>
+        <Text style={styles.fullListTitle}>Find Players</Text>
+      </View>
+      <Text style={styles.fullListSubtitle}>
+        {players.length} golfer{players.length === 1 ? '' : 's'} within {radiusMiles} mi
+        {clubFilter ? ` at ${clubFilter.name}` : ''}
+      </Text>
+      <ScrollView
+        contentContainerStyle={{ padding: 20, paddingBottom: 40, gap: 12 }}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} />}
+      >
+        {error ? (
+          <View style={styles.errorState}>
+            <Text style={styles.errorEmoji}>😕</Text>
+            <Text style={styles.errorTitle}>Couldn't load players</Text>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={onRefresh}>
+              <Text style={styles.retryText}>Try again</Text>
+            </TouchableOpacity>
+          </View>
+        ) : loading && players.length === 0 ? (
+          <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
+        ) : players.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyEmoji}>⛳</Text>
+            <Text style={styles.emptyTitle}>No players nearby</Text>
+            <Text style={styles.emptyText}>
+              {clubFilter
+                ? `No golfers at ${clubFilter.name} within ${radiusMiles} miles.`
+                : `Try widening your search radius, or check back later.`}
+            </Text>
+          </View>
+        ) : (
+          players.map((player) => (
+            <PlayerCard
+              key={player.id}
+              player={player}
+              onOpenProfile={() => onOpenProfile(player.id)}
+            />
+          ))
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
 // ---------- Styles ----------
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
@@ -890,7 +947,7 @@ const styles = StyleSheet.create({
   // Hero card (Next Round)
   heroCard: {
     marginHorizontal: 20,
-    height: 220,
+    minHeight: 260,
     borderRadius: 22,
     overflow: 'hidden',
     backgroundColor: colors.mist,
@@ -1170,6 +1227,9 @@ const styles = StyleSheet.create({
   },
   playersHeroHeader: {
     marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   playersHeroTitle: {
     fontFamily: fonts.bold,
@@ -1197,6 +1257,107 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semibold,
     fontSize: 13,
     letterSpacing: 0.2,
+  },
+
+  // Compact Find Players preview card
+  playersCountBadge: {
+    backgroundColor: '#E53935', // red badge
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 54,
+  },
+  playersCountBadgeText: {
+    color: '#fff',
+    fontFamily: fonts.bold,
+    fontSize: 18,
+    lineHeight: 20,
+  },
+  playersCountBadgeLabel: {
+    color: '#fff',
+    fontFamily: fonts.semibold,
+    fontSize: 9,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginTop: 1,
+  },
+  avatarPreviewRow: {
+    marginTop: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  avatarPreviewStack: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatarPreviewCta: {
+    color: colors.primary,
+    fontFamily: fonts.semibold,
+    fontSize: 13,
+    letterSpacing: 0.2,
+  },
+  miniAvatarMore: {
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  miniAvatarMoreText: {
+    color: colors.white,
+    fontFamily: fonts.bold,
+    fontSize: 11,
+  },
+  playersPreviewEmpty: {
+    marginTop: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  playersPreviewEmptyText: {
+    color: colors.textSecondary,
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    textAlign: 'center',
+  },
+  playersPreviewEmptyHint: {
+    color: colors.primary,
+    fontFamily: fonts.semibold,
+    fontSize: 12,
+    marginTop: 4,
+  },
+
+  // PlayersListScreen (full-list screen when you tap the compact card)
+  fullListHeader: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  fullListBackChevron: {
+    fontSize: 32,
+    color: colors.primary,
+    width: 32,
+    lineHeight: 32,
+  },
+  fullListTitle: {
+    fontFamily: fonts.bold,
+    fontSize: 18,
+    color: colors.primary,
+    flex: 1,
+  },
+  fullListSubtitle: {
+    fontFamily: fonts.regular,
+    fontSize: 12,
+    color: colors.textSecondary,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 4,
   },
 
   filterSection: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 },
