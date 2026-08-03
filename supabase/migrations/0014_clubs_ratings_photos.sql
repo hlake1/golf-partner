@@ -59,5 +59,5 @@ as $$
   from public.clubs c, origin o
   where st_dwithin(c.location, o.pt, radius_miles * 1609.344)
   order by distance_miles asc
-  limit 200;
+  limit 5000;
 $$;

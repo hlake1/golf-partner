@@ -242,6 +242,12 @@ export default function MapScreen() {
                 title={c.name}
                 description={`${c.distance_miles} mi away`}
                 pinColor={colors.primary}
+                // Big perf win when there are many markers: tell RN Maps that
+                // the marker view never changes after mount, so it stops
+                // re-rendering on every pan/zoom. Trade-off: any dynamic
+                // marker content (custom views) won't update, but we're just
+                // using the default pin so this is fine.
+                tracksViewChanges={false}
                 onPress={(e) => {
                   // Stop the map's onPress (which clears selection) from firing.
                   e.stopPropagation?.();

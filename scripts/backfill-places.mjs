@@ -82,7 +82,7 @@ async function fetchDetails(placeId) {
   const url =
     `https://maps.googleapis.com/maps/api/place/details/json` +
     `?place_id=${encodeURIComponent(placeId)}` +
-    `&fields=name,rating,user_ratings_total,photos` +
+    `&fields=name,rating,user_ratings_total,photos,website` +
     `&key=${GOOGLE_PLACES_API_KEY}`;
   const res = await fetch(url);
   const data = await res.json();
@@ -101,7 +101,7 @@ async function main() {
 
   let query = supabase
     .from('clubs')
-    .select('id, name, address, google_place_id, rating, last_places_lookup_at')
+    .select('id, name, address, website, google_place_id, rating, photo_url, last_places_lookup_at')
     .order('name');
 
   if (limit) query = query.limit(limit);
@@ -121,7 +121,10 @@ async function main() {
   for (const club of clubs) {
     if (onlyFilter && !club.name.toLowerCase().includes(onlyFilter)) continue;
 
-    const alreadyEnriched = !!club.google_place_id && club.rating !== null;
+    // "Enriched" now means we have place_id + rating + photo. Discovery
+    // fills the first two; backfill's job is mainly to add the photo + website.
+    const alreadyEnriched =
+      !!club.google_place_id && club.rating !== null && !!club.photo_url;
     if (alreadyEnriched && !force) {
       skipped++;
       continue;
@@ -154,6 +157,7 @@ async function main() {
       const ratingCount = details.user_ratings_total ?? null;
       const photoRef = details.photos?.[0]?.photo_reference ?? null;
       const photoUrl = photoRef ? buildPhotoUrl(photoRef) : null;
+      const website = details.website ?? null;
 
       console.log(
         `  ⭐ ${rating ?? 'no rating'}${
@@ -165,17 +169,24 @@ async function main() {
         continue;
       }
 
+      const patch = {
+        google_place_id: placeId,
+        rating,
+        rating_count: ratingCount,
+        photo_reference: photoRef,
+        photo_url: photoUrl,
+        photo_updated_at: photoUrl ? new Date().toISOString() : null,
+        last_places_lookup_at: new Date().toISOString(),
+      };
+      // Only overwrite website if the DB doesn't already have one — respects
+      // manually-curated URLs from the initial seed.
+      if (website && !club.website) {
+        patch.website = website;
+      }
+
       const { error: updateErr } = await supabase
         .from('clubs')
-        .update({
-          google_place_id: placeId,
-          rating,
-          rating_count: ratingCount,
-          photo_reference: photoRef,
-          photo_url: photoUrl,
-          photo_updated_at: photoUrl ? new Date().toISOString() : null,
-          last_places_lookup_at: new Date().toISOString(),
-        })
+        .update(patch)
         .eq('id', club.id);
 
       if (updateErr) {
