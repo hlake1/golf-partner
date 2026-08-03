@@ -42,6 +42,7 @@ export default function EditProfileScreen({ onCancel, onSaved }: Props) {
   const [playingStyle, setPlayingStyle] = useState<PlayingStyle>('casual');
   const [upForDrink, setUpForDrink] = useState<boolean>(false);
   const [occupation, setOccupation] = useState<string>('');
+  const [bio, setBio] = useState<string>('');
   const [searchRadius, setSearchRadius] = useState<number>(10);
 
   // Location — only replaced if the user hits "Update location".
@@ -67,6 +68,7 @@ export default function EditProfileScreen({ onCancel, onSaved }: Props) {
     setPlayingStyle(profile.playing_style);
     setUpForDrink(profile.up_for_drink_afterwards);
     setOccupation(profile.occupation ?? '');
+    setBio(profile.bio ?? '');
     setSearchRadius(profile.search_radius_miles ?? 10);
   }, [profile?.id]);
 
@@ -160,6 +162,7 @@ export default function EditProfileScreen({ onCancel, onSaved }: Props) {
         playing_style: playingStyle,
         up_for_drink_afterwards: upForDrink,
         occupation: occupation.trim() || null,
+        bio: bio.trim() || null,
         search_radius_miles: searchRadius,
       };
       if (newLocation) {
@@ -215,6 +218,7 @@ export default function EditProfileScreen({ onCancel, onSaved }: Props) {
         profile.playing_style !== playingStyle ||
         profile.up_for_drink_afterwards !== upForDrink ||
         (profile.occupation ?? '') !== occupation.trim() ||
+        (profile.bio ?? '') !== bio.trim() ||
         (profile.search_radius_miles ?? 10) !== searchRadius ||
         !!newLocation ||
         toDiff(selectedClubIds, originalClubIds));
@@ -296,6 +300,23 @@ export default function EditProfileScreen({ onCancel, onSaved }: Props) {
                 placeholderTextColor={colors.textMuted}
               />
               <Text style={styles.hint}>Handy for networking on the course.</Text>
+            </Field>
+
+            <Field label={`About Me / Interests (optional) — ${500 - bio.length} left`}>
+              <TextInput
+                style={[styles.input, styles.bioInput]}
+                value={bio}
+                onChangeText={(t) => setBio(t.slice(0, 500))}
+                placeholder="A short bio. What are you into on and off the course? What kind of round are you after?"
+                placeholderTextColor={colors.textMuted}
+                multiline
+                maxLength={500}
+                textAlignVertical="top"
+              />
+              <Text style={styles.hint}>
+                Give other players a feel for who you are. Interests, goals, playing frequency —
+                whatever you want them to know.
+              </Text>
             </Field>
           </Section>
 
@@ -561,6 +582,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
     color: colors.text,
+  },
+  bioInput: {
+    minHeight: 96,
+    paddingTop: 12,
   },
   hint: {
     fontSize: 12,

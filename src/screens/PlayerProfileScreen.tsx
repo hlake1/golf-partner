@@ -24,6 +24,7 @@ interface ProfileFull {
   playing_style: 'competitive' | 'casual';
   up_for_drink_afterwards: boolean;
   occupation: string | null;
+  bio: string | null;
   clubs: { id: string; name: string }[];
 }
 
@@ -50,7 +51,7 @@ export default function PlayerProfileScreen({ userId, onBack, onOpenChat }: Prop
         .select(
           `
           id, full_name, photo_url, handicap, age,
-          playing_style, up_for_drink_afterwards, occupation,
+          playing_style, up_for_drink_afterwards, occupation, bio,
           profile_clubs(club:clubs(id, name))
         `
         )
@@ -69,6 +70,7 @@ export default function PlayerProfileScreen({ userId, onBack, onOpenChat }: Prop
         playing_style: (data as any).playing_style,
         up_for_drink_afterwards: (data as any).up_for_drink_afterwards,
         occupation: (data as any).occupation,
+        bio: (data as any).bio,
         clubs: ((data as any).profile_clubs ?? [])
           .map((pc: any) => pc.club)
           .filter(Boolean),
@@ -266,6 +268,12 @@ export default function PlayerProfileScreen({ userId, onBack, onOpenChat }: Prop
                 </View>
               ))}
             </View>
+          </Section>
+        )}
+
+        {profile.bio && (
+          <Section title="About">
+            <Text style={styles.body}>{profile.bio}</Text>
           </Section>
         )}
 

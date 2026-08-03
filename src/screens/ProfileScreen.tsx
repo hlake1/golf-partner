@@ -259,6 +259,17 @@ export default function ProfileScreen() {
           )}
         </Section>
 
+        {/* About Me / Interests */}
+        <Section title="About Me">
+          {profile.bio ? (
+            <Text style={styles.bioText}>{profile.bio}</Text>
+          ) : (
+            <Text style={styles.emptyText}>
+              No bio yet — tap Edit Profile to add a short intro.
+            </Text>
+          )}
+        </Section>
+
         {/* Occupation */}
         <Section title="Occupation">
           {profile.occupation ? (
@@ -453,6 +464,11 @@ const styles = StyleSheet.create({
   },
   plainText: {
     fontSize: 14,
+    color: colors.text,
+  },
+  bioText: {
+    fontSize: 14,
+    lineHeight: 20,
     color: colors.text,
   },
   helperText: {

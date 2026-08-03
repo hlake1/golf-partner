@@ -11,6 +11,7 @@ import {
   Platform,
   Image,
   Alert,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
@@ -167,6 +168,22 @@ export default function ChatScreen({ friendId, friendName, friendPhoto, onBack }
   const tabBarHeight = useBottomTabBarHeight();
   const insets = useSafeAreaInsets();
 
+  // Track keyboard visibility so we can drop the tab-bar-height padding on the
+  // composer when the keyboard is open. Without this, KeyboardAvoidingView
+  // lifts the whole tree AND we keep tabBarHeight padding, leaving a visible
+  // white strip between the composer and the keyboard.
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  useEffect(() => {
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvt, () => setKeyboardVisible(true));
+    const hideSub = Keyboard.addListener(hideEvt, () => setKeyboardVisible(false));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <KeyboardAvoidingView
@@ -229,11 +246,13 @@ export default function ChatScreen({ friendId, friendName, friendPhoto, onBack }
           style={[
             styles.composer,
             {
-              // When the keyboard is CLOSED, this padding keeps the composer
-              // above the tab bar + home-indicator safe area. When the
-              // keyboard is OPEN, KeyboardAvoidingView lifts the whole tree so
-              // this padding just becomes the visual bottom breathing room.
-              paddingBottom: Math.max(insets.bottom, 10) + tabBarHeight,
+              // When the keyboard is CLOSED, pad the composer up above the
+              // tab bar + home-indicator safe area. When it's OPEN,
+              // KeyboardAvoidingView already lifts the whole tree, so adding
+              // tabBarHeight on top of that leaves a visible white gap.
+              paddingBottom: keyboardVisible
+                ? 10
+                : Math.max(insets.bottom, 10) + tabBarHeight,
             },
           ]}
         >

@@ -13,6 +13,7 @@ export interface Profile {
   playing_style: PlayingStyle;
   up_for_drink_afterwards: boolean;
   occupation: string | null;
+  bio: string | null;
   home_location: unknown | null; // PostGIS geography — we only care if it's set
   search_radius_miles: number;
   created_at: string;
