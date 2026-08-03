@@ -15,7 +15,6 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { colors } from '../theme/colors';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -160,18 +159,11 @@ export default function ChatScreen({ friendId, friendName, friendPhoto, onBack }
   // (the parent Tab navigator's header) so it can compute the correct amount
   // of padding to lift the composer above the keyboard.
   const headerHeight = useHeaderHeight();
-  // ...and the height of anything BELOW our screen (the bottom tab bar). We
-  // pad the composer by tabBarHeight so it sits above the tab bar when the
-  // keyboard is closed. When the keyboard opens, iOS raises the whole tree
-  // above the keyboard so the tab bar goes off-screen anyway — the padding
-  // then just becomes visual breathing room above the keyboard.
-  const tabBarHeight = useBottomTabBarHeight();
   const insets = useSafeAreaInsets();
 
-  // Track keyboard visibility so we can drop the tab-bar-height padding on the
-  // composer when the keyboard is open. Without this, KeyboardAvoidingView
-  // lifts the whole tree AND we keep tabBarHeight padding, leaving a visible
-  // white strip between the composer and the keyboard.
+  // Track keyboard visibility so we can trim the composer padding when the
+  // keyboard is open (KeyboardAvoidingView already lifts the tree, so any
+  // extra bottom padding shows up as a visible white strip).
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   useEffect(() => {
     const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -246,13 +238,11 @@ export default function ChatScreen({ friendId, friendName, friendPhoto, onBack }
           style={[
             styles.composer,
             {
-              // When the keyboard is CLOSED, pad the composer up above the
-              // tab bar + home-indicator safe area. When it's OPEN,
-              // KeyboardAvoidingView already lifts the whole tree, so adding
-              // tabBarHeight on top of that leaves a visible white gap.
-              paddingBottom: keyboardVisible
-                ? 10
-                : Math.max(insets.bottom, 10) + tabBarHeight,
+              // The screen is already sized to exclude the bottom tab bar,
+              // and KeyboardAvoidingView lifts the tree when the keyboard
+              // opens. So we only need enough padding for the home-indicator
+              // safe area (closed) or a small breathing room (open).
+              paddingBottom: keyboardVisible ? 10 : Math.max(insets.bottom, 10),
             },
           ]}
         >
