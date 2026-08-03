@@ -9,6 +9,8 @@ import {
   ScrollView,
   Linking,
   Image,
+  TextInput,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -64,6 +66,8 @@ export default function MapScreen() {
   // Default to "All" so users see every club we have in the DB from a
   // zoomed-out perspective. They can still tap 5/10/25/50 mi to zoom in.
   const [showAll, setShowAll] = useState(true);
+  const [search, setSearch] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
   const mapRef = useRef<MapView>(null);
 
   // Keep radius in sync with profile's default (only until user picks manually).
@@ -155,6 +159,38 @@ export default function MapScreen() {
     Linking.openURL(withScheme).catch(() => {});
   };
 
+  // Search results: filter loaded clubs by name/address (top 8 matches).
+  const searchResults = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return [];
+    return clubs
+      .filter((c) => {
+        if (c.name.toLowerCase().includes(q)) return true;
+        if (c.address && c.address.toLowerCase().includes(q)) return true;
+        return false;
+      })
+      .slice(0, 8);
+  }, [clubs, search]);
+
+  // Zoom the map to a specific club when the user picks it from search.
+  const focusOnClub = (club: NearbyClub) => {
+    setSelected(club);
+    setSearch('');
+    setSearchFocused(false);
+    Keyboard.dismiss();
+    if (mapRef.current) {
+      mapRef.current.animateToRegion(
+        {
+          latitude: club.latitude,
+          longitude: club.longitude,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        },
+        500
+      );
+    }
+  };
+
   // Web fallback: react-native-maps doesn't support web without extra setup.
   if (Platform.OS === 'web') {
     return (
@@ -193,6 +229,77 @@ export default function MapScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      {/* Search bar */}
+      <View style={styles.mapSearchWrap}>
+        <Text style={styles.mapSearchIcon}>🔍</Text>
+        <TextInput
+          style={styles.mapSearchInput}
+          placeholder={`Search ${clubs.length} clubs…`}
+          placeholderTextColor={colors.textMuted}
+          value={search}
+          onChangeText={setSearch}
+          onFocus={() => setSearchFocused(true)}
+          autoCorrect={false}
+          autoCapitalize="none"
+          returnKeyType="search"
+          clearButtonMode="while-editing"
+        />
+        {search.length > 0 && (
+          <TouchableOpacity
+            onPress={() => {
+              setSearch('');
+              Keyboard.dismiss();
+            }}
+            hitSlop={8}
+          >
+            <Text style={styles.mapSearchClear}>✕</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Search results dropdown */}
+      {searchFocused && searchResults.length > 0 && (
+        <View style={styles.searchResultsWrap}>
+          <ScrollView keyboardShouldPersistTaps="handled">
+            {searchResults.map((c) => (
+              <TouchableOpacity
+                key={c.id}
+                style={styles.searchResultRow}
+                onPress={() => focusOnClub(c)}
+                activeOpacity={0.6}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.searchResultName} numberOfLines={1}>
+                    {c.name}
+                  </Text>
+                  {c.address && (
+                    <Text style={styles.searchResultAddress} numberOfLines={1}>
+                      {c.address}
+                    </Text>
+                  )}
+                </View>
+                {c.rating !== null && (
+                  <View style={styles.searchResultRating}>
+                    <Text style={styles.searchResultStar}>★</Text>
+                    <Text style={styles.searchResultRatingValue}>
+                      {c.rating.toFixed(1)}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
+      {searchFocused && search.length > 0 && searchResults.length === 0 && (
+        <View style={styles.searchResultsWrap}>
+          <Text style={styles.searchEmpty}>
+            No clubs match “{search}”.
+          </Text>
+        </View>
+      )}
+
       {/* Radius picker */}
       <View style={styles.radiusBar}>
         <Text style={styles.radiusLabel}>Radius</Text>
@@ -454,6 +561,82 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+  mapSearchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: 8,
+  },
+  mapSearchIcon: {
+    fontSize: 14,
+    color: colors.textMuted,
+  },
+  mapSearchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: colors.text,
+    padding: 0,
+    paddingVertical: Platform.OS === 'ios' ? 6 : 2,
+  },
+  mapSearchClear: {
+    fontSize: 16,
+    color: colors.textMuted,
+    paddingHorizontal: 4,
+  },
+  searchResultsWrap: {
+    backgroundColor: colors.surface,
+    maxHeight: 320,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  searchResultRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+    gap: 12,
+  },
+  searchResultName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  searchResultAddress: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  searchResultRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  searchResultStar: {
+    fontSize: 12,
+    color: '#F5B301',
+  },
+  searchResultRatingValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  searchEmpty: {
+    padding: 20,
+    textAlign: 'center',
+    color: colors.textMuted,
+    fontSize: 14,
   },
   radiusLabel: {
     fontSize: 13,

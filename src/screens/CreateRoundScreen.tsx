@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -43,6 +43,17 @@ export default function CreateRoundScreen({
   const [clubsLoading, setClubsLoading] = useState(true);
   const [clubModal, setClubModal] = useState(false);
   const [selectedClub, setSelectedClub] = useState<Club | null>(null);
+  const [clubSearch, setClubSearch] = useState('');
+
+  const filteredClubs = useMemo(() => {
+    const q = clubSearch.trim().toLowerCase();
+    if (!q) return clubs;
+    return clubs.filter((c) => {
+      if (c.name.toLowerCase().includes(q)) return true;
+      if (c.county && c.county.toLowerCase().includes(q)) return true;
+      return false;
+    });
+  }, [clubs, clubSearch]);
   const [scheduledFor, setScheduledFor] = useState<Date>(() => {
     // If a prefill date was supplied, use it (at 10:00 local time).
     if (prefillDate) {
@@ -286,9 +297,9 @@ export default function CreateRoundScreen({
 
       {/* Club selection modal */}
       <Modal visible={clubModal} animationType="slide" onRequestClose={() => setClubModal(false)}>
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => setClubModal(false)}>
+            <TouchableOpacity onPress={() => setClubModal(false)} hitSlop={12}>
               <Text style={styles.cancelText} numberOfLines={1}>
                 Cancel
               </Text>
@@ -296,8 +307,39 @@ export default function CreateRoundScreen({
             <Text style={styles.headerTitle}>Choose a Club</Text>
             <View style={{ width: 60 }} />
           </View>
-          <ScrollView contentContainerStyle={{ padding: 16 }}>
-            {clubs.map((c) => (
+
+          {/* Search bar */}
+          <View style={styles.searchWrap}>
+            <Text style={styles.searchIcon}>🔍</Text>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search clubs…"
+              placeholderTextColor={colors.textMuted}
+              value={clubSearch}
+              onChangeText={setClubSearch}
+              autoCorrect={false}
+              autoCapitalize="none"
+              returnKeyType="search"
+              clearButtonMode="while-editing"
+            />
+            {clubSearch.length > 0 && (
+              <TouchableOpacity onPress={() => setClubSearch('')} hitSlop={8}>
+                <Text style={styles.searchClear}>✕</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <ScrollView
+            contentContainerStyle={{ padding: 16 }}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+          >
+            {filteredClubs.length === 0 && (
+              <Text style={styles.emptySearchText}>
+                No clubs match “{clubSearch}”. Try a different spelling?
+              </Text>
+            )}
+            {filteredClubs.map((c) => (
               <TouchableOpacity
                 key={c.id}
                 style={[
@@ -307,6 +349,7 @@ export default function CreateRoundScreen({
                 onPress={() => {
                   setSelectedClub(c);
                   setClubModal(false);
+                  setClubSearch('');
                 }}
               >
                 <View style={{ flex: 1 }}>
@@ -332,13 +375,49 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 16,
+    paddingBottom: 12,
+    minHeight: 56,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
     backgroundColor: colors.surface,
   },
   cancelText: { color: colors.primary, fontSize: 15, fontWeight: '600', minWidth: 60 },
   headerTitle: { fontSize: 17, fontWeight: '700', color: colors.text },
+  searchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceElevated,
+    marginHorizontal: 16,
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: Platform.OS === 'ios' ? 10 : 6,
+    borderRadius: 10,
+    gap: 8,
+  },
+  searchIcon: {
+    fontSize: 14,
+    color: colors.textMuted,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: colors.text,
+    padding: 0,
+  },
+  searchClear: {
+    fontSize: 16,
+    color: colors.textMuted,
+    paddingHorizontal: 4,
+  },
+  emptySearchText: {
+    textAlign: 'center',
+    color: colors.textMuted,
+    fontSize: 14,
+    marginTop: 32,
+    paddingHorizontal: 24,
+    lineHeight: 20,
+  },
   scroll: { padding: 20, paddingBottom: 40 },
   row: { flexDirection: 'row', gap: 12 },
   field: { marginBottom: 20 },
