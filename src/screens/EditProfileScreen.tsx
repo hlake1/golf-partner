@@ -246,14 +246,18 @@ export default function EditProfileScreen({ onCancel, onSaved }: Props) {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleCancel} hitSlop={10}>
-          <Text style={styles.headerBtnText}>Cancel</Text>
+          <Text style={styles.headerBtnText} numberOfLines={1}>
+            Cancel
+          </Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Profile</Text>
         <TouchableOpacity onPress={save} disabled={saving} hitSlop={10}>
           {saving ? (
             <ActivityIndicator size="small" color={colors.white} />
           ) : (
-            <Text style={[styles.headerBtnText, styles.headerBtnSave]}>Save</Text>
+            <Text style={[styles.headerBtnText, styles.headerBtnSave]} numberOfLines={1}>
+              Save
+            </Text>
           )}
         </TouchableOpacity>
       </View>

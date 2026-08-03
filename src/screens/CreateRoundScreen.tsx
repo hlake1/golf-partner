@@ -130,7 +130,9 @@ export default function CreateRoundScreen({
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onCancel}>
-          <Text style={styles.cancelText}>Cancel</Text>
+          <Text style={styles.cancelText} numberOfLines={1}>
+            Cancel
+          </Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Post a Round</Text>
         <View style={{ width: 60 }} />
@@ -287,7 +289,9 @@ export default function CreateRoundScreen({
         <SafeAreaView style={styles.container}>
           <View style={styles.header}>
             <TouchableOpacity onPress={() => setClubModal(false)}>
-              <Text style={styles.cancelText}>Cancel</Text>
+              <Text style={styles.cancelText} numberOfLines={1}>
+                Cancel
+              </Text>
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Choose a Club</Text>
             <View style={{ width: 60 }} />
@@ -333,7 +337,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     backgroundColor: colors.surface,
   },
-  cancelText: { color: colors.primary, fontSize: 15, fontWeight: '600', width: 60 },
+  cancelText: { color: colors.primary, fontSize: 15, fontWeight: '600', minWidth: 60 },
   headerTitle: { fontSize: 17, fontWeight: '700', color: colors.text },
   scroll: { padding: 20, paddingBottom: 40 },
   row: { flexDirection: 'row', gap: 12 },

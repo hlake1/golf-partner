@@ -445,7 +445,9 @@ export default function HomeScreen() {
         <SafeAreaView style={styles.container}>
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={() => setClubModalOpen(false)}>
-              <Text style={styles.modalCancel}>Cancel</Text>
+              <Text style={styles.modalCancel} numberOfLines={1}>
+                Cancel
+              </Text>
             </TouchableOpacity>
             <Text style={styles.modalTitle}>Filter by Club</Text>
             <View style={{ width: 60 }} />
@@ -1250,7 +1252,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     backgroundColor: colors.surface,
   },
-  modalCancel: { color: colors.primary, fontFamily: fonts.semibold, fontSize: 15, width: 60 },
+  modalCancel: { color: colors.primary, fontFamily: fonts.semibold, fontSize: 15, minWidth: 60 },
   modalTitle: { fontFamily: fonts.bold, fontSize: 17, color: colors.text },
   clubOption: {
     flexDirection: 'row',
