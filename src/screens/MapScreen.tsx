@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Linking,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -60,7 +61,9 @@ export default function MapScreen() {
     'idle'
   );
   const [selected, setSelected] = useState<NearbyClub | null>(null);
-  const [showAll, setShowAll] = useState(false);
+  // Default to "All" so users see every club we have in the DB from a
+  // zoomed-out perspective. They can still tap 5/10/25/50 mi to zoom in.
+  const [showAll, setShowAll] = useState(true);
   const mapRef = useRef<MapView>(null);
 
   // Keep radius in sync with profile's default (only until user picks manually).
@@ -301,14 +304,32 @@ export default function MapScreen() {
         {/* Selected club bottom card */}
         {selected && (
           <View style={styles.card}>
+            {selected.photo_url && (
+              <Image
+                source={{ uri: selected.photo_url }}
+                style={styles.cardHeroImage}
+                resizeMode="cover"
+              />
+            )}
             <View style={styles.cardHeader}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.cardTitle} numberOfLines={1}>
                   {selected.name}
                 </Text>
-                <Text style={styles.cardDistance}>
-                  {selected.distance_miles} miles away
-                </Text>
+                <View style={styles.cardMetaRow}>
+                  <Text style={styles.cardDistance}>
+                    {selected.distance_miles} miles away
+                  </Text>
+                  {selected.rating !== null && (
+                    <>
+                      <Text style={styles.cardMetaDot}>•</Text>
+                      <ClubRatingRow
+                        rating={selected.rating}
+                        count={selected.rating_count}
+                      />
+                    </>
+                  )}
+                </View>
               </View>
               <TouchableOpacity onPress={() => setSelected(null)} hitSlop={10}>
                 <Text style={styles.cardClose}>✕</Text>
@@ -345,6 +366,24 @@ export default function MapScreen() {
 }
 
 // Simple card used in the web fallback.
+function ClubRatingRow({
+  rating,
+  count,
+}: {
+  rating: number;
+  count: number | null;
+}) {
+  return (
+    <View style={styles.ratingRow}>
+      <Text style={styles.ratingStar}>★</Text>
+      <Text style={styles.ratingValue}>{rating.toFixed(1)}</Text>
+      {count !== null && count > 0 && (
+        <Text style={styles.ratingCount}>({count.toLocaleString()})</Text>
+      )}
+    </View>
+  );
+}
+
 function ClubCard({
   club,
   onOpenWebsite,
@@ -356,8 +395,23 @@ function ClubCard({
 }) {
   return (
     <View style={styles.webCard}>
+      {club.photo_url && (
+        <Image
+          source={{ uri: club.photo_url }}
+          style={styles.webCardHeroImage}
+          resizeMode="cover"
+        />
+      )}
       <Text style={styles.cardTitle}>{club.name}</Text>
-      <Text style={styles.cardDistance}>{club.distance_miles} miles away</Text>
+      <View style={styles.cardMetaRow}>
+        <Text style={styles.cardDistance}>{club.distance_miles} miles away</Text>
+        {club.rating !== null && (
+          <>
+            <Text style={styles.cardMetaDot}>•</Text>
+            <ClubRatingRow rating={club.rating} count={club.rating_count} />
+          </>
+        )}
+      </View>
       {club.address && <Text style={styles.cardAddress}>{club.address}</Text>}
       <View style={styles.cardBtnRow}>
         {club.website && (
@@ -562,6 +616,42 @@ const styles = StyleSheet.create({
     marginTop: 8,
     lineHeight: 18,
   },
+  cardHeroImage: {
+    width: '100%',
+    height: 140,
+    borderRadius: 10,
+    marginBottom: 12,
+    backgroundColor: colors.surfaceElevated,
+  },
+  cardMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 2,
+    flexWrap: 'wrap',
+  },
+  cardMetaDot: {
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  ratingStar: {
+    fontSize: 13,
+    color: '#F5B301', // gold
+  },
+  ratingValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  ratingCount: {
+    fontSize: 12,
+    color: colors.textMuted,
+  },
   cardBtnRow: {
     marginTop: 12,
     flexDirection: 'row',
@@ -622,6 +712,13 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  webCardHeroImage: {
+    width: '100%',
+    height: 160,
+    borderRadius: 10,
+    marginBottom: 12,
+    backgroundColor: colors.surfaceElevated,
   },
   emptyText: {
     textAlign: 'center',

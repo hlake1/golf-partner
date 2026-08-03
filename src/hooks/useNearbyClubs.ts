@@ -10,6 +10,9 @@ export interface NearbyClub {
   latitude: number;
   longitude: number;
   distance_miles: number;
+  rating: number | null;
+  rating_count: number | null;
+  photo_url: string | null;
 }
 
 interface Options {
@@ -81,6 +84,12 @@ export function useNearbyClubs({ radiusMiles, origin }: Options) {
       latitude: Number(c.latitude),
       longitude: Number(c.longitude),
       distance_miles: Number(Number(c.distance_miles).toFixed(1)),
+      rating: c.rating !== null && c.rating !== undefined ? Number(c.rating) : null,
+      rating_count:
+        c.rating_count !== null && c.rating_count !== undefined
+          ? Number(c.rating_count)
+          : null,
+      photo_url: c.photo_url ?? null,
     }));
 
     setClubs(mapped);
