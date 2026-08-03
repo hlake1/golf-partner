@@ -20,6 +20,23 @@ import { uploadProfilePhoto } from '../lib/uploadProfilePhoto';
 import EditProfileScreen from './EditProfileScreen';
 import PlayerProfileScreen from './PlayerProfileScreen';
 import ChatScreen from './ChatScreen';
+import LegalScreen from './LegalScreen';
+import { PRIVACY_POLICY } from '../legal/privacyPolicy';
+import { TERMS_OF_SERVICE } from '../legal/termsOfService';
+import { COOKIES_POLICY } from '../legal/cookiesPolicy';
+import { COMMUNITY_GUIDELINES } from '../legal/communityGuidelines';
+
+type LegalDoc = 'privacy' | 'terms' | 'cookies' | 'community';
+
+const LEGAL_DOCS: Record<
+  LegalDoc,
+  { title: string; content: string }
+> = {
+  privacy: { title: 'Privacy Policy', content: PRIVACY_POLICY },
+  terms: { title: 'Terms of Service', content: TERMS_OF_SERVICE },
+  cookies: { title: 'Cookies & Tracking', content: COOKIES_POLICY },
+  community: { title: 'Community Guidelines', content: COMMUNITY_GUIDELINES },
+};
 
 interface ClubRow {
   club_id: string;
@@ -40,6 +57,7 @@ export default function ProfileScreen() {
   const [photoUpdating, setPhotoUpdating] = useState(false);
   const [editing, setEditing] = useState(false);
   const [friendOpen, setFriendOpen] = useState<FriendOpen>({ kind: 'none' });
+  const [legalOpen, setLegalOpen] = useState<LegalDoc | null>(null);
 
   // Refresh clubs after editing (so club chips reflect the changes).
   const [clubsVersion, setClubsVersion] = useState(0);
@@ -150,6 +168,18 @@ export default function ProfileScreen() {
           setFriendOpen({ kind: 'none' });
           refreshFriends();
         }}
+      />
+    );
+  }
+
+  // Full-screen legal doc viewer.
+  if (legalOpen) {
+    const doc = LEGAL_DOCS[legalOpen];
+    return (
+      <LegalScreen
+        title={doc.title}
+        content={doc.content}
+        onBack={() => setLegalOpen(null)}
       />
     );
   }
@@ -304,6 +334,31 @@ export default function ProfileScreen() {
           <Text style={styles.editButtonText}>Edit Profile</Text>
         </TouchableOpacity>
 
+        {/* Legal & Privacy */}
+        <Section title="Legal & Privacy">
+          <LegalRow
+            icon="🔒"
+            label="Privacy Policy"
+            onPress={() => setLegalOpen('privacy')}
+          />
+          <LegalRow
+            icon="📜"
+            label="Terms of Service"
+            onPress={() => setLegalOpen('terms')}
+          />
+          <LegalRow
+            icon="🍪"
+            label="Cookies & Tracking"
+            onPress={() => setLegalOpen('cookies')}
+          />
+          <LegalRow
+            icon="🤝"
+            label="Community Guidelines"
+            onPress={() => setLegalOpen('community')}
+            isLast
+          />
+        </Section>
+
         <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
           <Text style={styles.signOutText}>Sign Out</Text>
         </TouchableOpacity>
@@ -340,6 +395,30 @@ function PreferenceRow({ label, value }: { label: string; value: string }) {
       <Text style={styles.preferenceLabel}>{label}</Text>
       <Text style={styles.preferenceValue}>{value}</Text>
     </View>
+  );
+}
+
+function LegalRow({
+  icon,
+  label,
+  onPress,
+  isLast,
+}: {
+  icon: string;
+  label: string;
+  onPress: () => void;
+  isLast?: boolean;
+}) {
+  return (
+    <TouchableOpacity
+      style={[styles.legalRow, isLast && styles.legalRowLast]}
+      onPress={onPress}
+      activeOpacity={0.6}
+    >
+      <Text style={styles.legalIcon}>{icon}</Text>
+      <Text style={styles.legalLabel}>{label}</Text>
+      <Text style={styles.legalChevron}>›</Text>
+    </TouchableOpacity>
   );
 }
 
@@ -495,6 +574,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: colors.text,
+  },
+  legalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  legalRowLast: {
+    borderBottomWidth: 0,
+  },
+  legalIcon: {
+    fontSize: 18,
+    marginRight: 12,
+    width: 26,
+    textAlign: 'center',
+  },
+  legalLabel: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  legalChevron: {
+    fontSize: 20,
+    color: colors.textMuted,
+    fontWeight: '400',
   },
   editButton: {
     marginHorizontal: 20,
