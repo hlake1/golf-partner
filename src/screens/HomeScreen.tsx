@@ -13,6 +13,7 @@ import {
   ImageBackground,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, {
   Path,
@@ -226,6 +227,13 @@ export default function HomeScreen() {
   const { profile } = useProfile();
   const firstName = firstNameOf(profile?.full_name);
   const greeting = greetingForNow();
+  const navigation = useNavigation<any>();
+
+  // Jump to the Calendar tab and open the Post a Round flow. Handled via the
+  // existing `postRound` route param that CalendarScreen already listens for.
+  const goPostRound = () => {
+    navigation.navigate('Calendar', { postRound: {} });
+  };
 
   const [radiusMiles, setRadiusMiles] = useState(10);
   const [clubFilter, setClubFilter] = useState<Club | null>(null);
@@ -286,8 +294,110 @@ export default function HomeScreen() {
           <Text style={styles.subGreeting}>Ready to play?</Text>
         </View>
 
-        {/* ===== Next Round hero card ===== */}
-        <NextRoundCard round={nextRound} loading={roundsLoading} />
+        {/* ===== 🏆 HERO 1: Players Near You (matching 3D card look) ===== */}
+        <View style={[styles.playersHero, styles.cardShadow]}>
+          <View style={styles.playersHeroHeader}>
+            <Text style={styles.playersHeroTitle}>Find Players</Text>
+            <Text style={styles.playersHeroSubtitle}>
+              Golfers near you — tap a card to invite them for a round
+            </Text>
+          </View>
+
+          {/* Radius filter */}
+          <View style={styles.filterRow}>
+            {RADIUS_OPTIONS.map((r) => (
+              <TouchableOpacity
+                key={r}
+                style={[
+                  styles.filterChip,
+                  radiusMiles === r && styles.filterChipActive,
+                ]}
+                onPress={() => setRadiusMiles(r)}
+              >
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    radiusMiles === r && styles.filterChipTextActive,
+                  ]}
+                >
+                  {r} mi
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Club filter */}
+          <View style={styles.clubFilterRow}>
+            <TouchableOpacity
+              style={[styles.clubFilterChip, !clubFilter && styles.filterChipActive]}
+              onPress={() => setClubFilter(null)}
+            >
+              <Text
+                style={[
+                  styles.filterChipText,
+                  !clubFilter && styles.filterChipTextActive,
+                ]}
+              >
+                All clubs
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.clubFilterChip, clubFilter && styles.filterChipActive]}
+              onPress={() => setClubModalOpen(true)}
+            >
+              <Text
+                style={[
+                  styles.filterChipText,
+                  clubFilter && styles.filterChipTextActive,
+                ]}
+                numberOfLines={1}
+              >
+                {clubFilter ? `⛳ ${clubFilter.name}` : 'Filter by club'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Player results */}
+          {error ? (
+            <View style={styles.errorState}>
+              <Text style={styles.errorEmoji}>😕</Text>
+              <Text style={styles.errorTitle}>Couldn't load players</Text>
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity style={styles.retryButton} onPress={refresh}>
+                <Text style={styles.retryText}>Try again</Text>
+              </TouchableOpacity>
+            </View>
+          ) : loading && players.length === 0 ? (
+            <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
+          ) : players.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyEmoji}>⛳</Text>
+              <Text style={styles.emptyTitle}>No players nearby</Text>
+              <Text style={styles.emptyText}>
+                {clubFilter
+                  ? `No golfers at ${clubFilter.name} within ${radiusMiles} miles.`
+                  : `Try widening your search radius, or check back later.`}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.playerList}>
+              {players.map((player) => (
+                <PlayerCard
+                  key={player.id}
+                  player={player}
+                  onOpenProfile={() => setOpenProfileId(player.id)}
+                />
+              ))}
+            </View>
+          )}
+        </View>
+
+        {/* ===== 🏆 HERO 2: Post a Round (tappable → Plan a Round) ===== */}
+        <NextRoundCard
+          round={nextRound}
+          loading={roundsLoading}
+          onPress={goPostRound}
+        />
 
         {/* ===== YOUR GAME ===== */}
         <Text style={styles.sectionLabel}>YOUR GAME</Text>
@@ -324,116 +434,8 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* ===== QUICK ACTIONS ===== */}
-        <Text style={styles.sectionLabel}>QUICK ACTIONS</Text>
-        <View style={styles.actionsRow}>
-          <QuickAction icon={<IconUsers />} label="Play Together" onPress={() => { /* scroll to players list */ }} />
-          <QuickAction icon={<IconCalendarSquare />} label="Track & Improve" onPress={() => {}} />
-          <QuickAction icon={<IconTrophy />} label="Compete" onPress={() => {}} />
-          <QuickAction icon={<IconMapPin />} label="Explore Courses" onPress={() => {}} />
-        </View>
-
         {/* ===== Brand banner ===== */}
         <BrandBanner />
-
-        {/* ===== Players nearby (existing feature, kept as secondary section) ===== */}
-        <View style={styles.playersHeader}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.playersTitle}>Players Near You</Text>
-            <Text style={styles.playersSubtitle}>Tap a card to invite someone</Text>
-          </View>
-        </View>
-
-        {/* Radius filter */}
-        <View style={styles.filterSection}>
-          <View style={styles.filterRow}>
-            {RADIUS_OPTIONS.map((r) => (
-              <TouchableOpacity
-                key={r}
-                style={[
-                  styles.filterChip,
-                  radiusMiles === r && styles.filterChipActive,
-                ]}
-                onPress={() => setRadiusMiles(r)}
-              >
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    radiusMiles === r && styles.filterChipTextActive,
-                  ]}
-                >
-                  {r} mi
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.filterSection}>
-          <View style={styles.clubFilterRow}>
-            <TouchableOpacity
-              style={[styles.clubFilterChip, !clubFilter && styles.filterChipActive]}
-              onPress={() => setClubFilter(null)}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  !clubFilter && styles.filterChipTextActive,
-                ]}
-              >
-                All clubs
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.clubFilterChip, clubFilter && styles.filterChipActive]}
-              onPress={() => setClubModalOpen(true)}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  clubFilter && styles.filterChipTextActive,
-                ]}
-                numberOfLines={1}
-              >
-                {clubFilter ? `⛳ ${clubFilter.name}` : 'Filter by club'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Player results */}
-        {error ? (
-          <View style={styles.errorState}>
-            <Text style={styles.errorEmoji}>😕</Text>
-            <Text style={styles.errorTitle}>Couldn't load players</Text>
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={refresh}>
-              <Text style={styles.retryText}>Try again</Text>
-            </TouchableOpacity>
-          </View>
-        ) : loading && players.length === 0 ? (
-          <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
-        ) : players.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyEmoji}>⛳</Text>
-            <Text style={styles.emptyTitle}>No players nearby</Text>
-            <Text style={styles.emptyText}>
-              {clubFilter
-                ? `No golfers at ${clubFilter.name} within ${radiusMiles} miles.`
-                : `Try widening your search radius, or check back later.`}
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.playerList}>
-            {players.map((player) => (
-              <PlayerCard
-                key={player.id}
-                player={player}
-                onOpenProfile={() => setOpenProfileId(player.id)}
-              />
-            ))}
-          </View>
-        )}
       </ScrollView>
 
       {/* Club filter modal */}
@@ -489,7 +491,15 @@ export default function HomeScreen() {
 }
 
 // ---------- Next Round hero card ----------
-function NextRoundCard({ round, loading }: { round: MyRound | null; loading: boolean }) {
+function NextRoundCard({
+  round,
+  loading,
+  onPress,
+}: {
+  round: MyRound | null;
+  loading: boolean;
+  onPress?: () => void;
+}) {
   if (loading) {
     return (
       <View style={[styles.heroCard, styles.cardShadow, { alignItems: 'center', justifyContent: 'center', height: 200 }]}>
@@ -499,32 +509,37 @@ function NextRoundCard({ round, loading }: { round: MyRound | null; loading: boo
   }
 
   if (!round) {
-    // Empty state hero card — invite user to post one
+    // Empty state hero card — invite user to post one, tap to jump to Calendar
     return (
-      <ImageBackground
-        source={{ uri: HERO_COURSE_IMAGE }}
-        style={[styles.heroCard, styles.cardShadow]}
-        imageStyle={styles.heroImage}
-      >
-        <LinearGradient
-          colors={['rgba(255,255,255,0.96)', 'rgba(255,255,255,0.85)', 'rgba(255,255,255,0.0)']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.heroGradient}
-        />
-        <View style={styles.heroContent}>
-          <Text style={styles.heroLabel}>NEXT ROUND</Text>
-          <Text style={styles.heroTitle}>Post your first round</Text>
-          <View style={styles.heroMetaRow}>
-            <IconCalendar size={14} />
-            <Text style={styles.heroMetaText}>Head to the Calendar tab</Text>
+      <TouchableOpacity activeOpacity={0.9} onPress={onPress}>
+        <ImageBackground
+          source={{ uri: HERO_COURSE_IMAGE }}
+          style={[styles.heroCard, styles.cardShadow]}
+          imageStyle={styles.heroImage}
+        >
+          <LinearGradient
+            colors={['rgba(255,255,255,0.96)', 'rgba(255,255,255,0.85)', 'rgba(255,255,255,0.0)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.heroGradient}
+          />
+          <View style={styles.heroContent}>
+            <Text style={styles.heroLabel}>POST A ROUND</Text>
+            <Text style={styles.heroTitle}>Plan your next round</Text>
+            <View style={styles.heroMetaRow}>
+              <IconCalendar size={14} />
+              <Text style={styles.heroMetaText}>Pick a date & time</Text>
+            </View>
+            <View style={styles.heroMetaRow}>
+              <IconPin size={14} />
+              <Text style={styles.heroMetaText}>Choose your club</Text>
+            </View>
+            <View style={[styles.heroCtaPill, { marginTop: 12 }]}>
+              <Text style={styles.heroCtaText}>Tap to post →</Text>
+            </View>
           </View>
-          <View style={styles.heroMetaRow}>
-            <IconPin size={14} />
-            <Text style={styles.heroMetaText}>Choose your club</Text>
-          </View>
-        </View>
-      </ImageBackground>
+        </ImageBackground>
+      </TouchableOpacity>
     );
   }
 
@@ -534,11 +549,12 @@ function NextRoundCard({ round, loading }: { round: MyRound | null; loading: boo
   const capacity = attendingCount + (round.players_needed ?? 0);
 
   return (
-    <ImageBackground
-      source={{ uri: HERO_COURSE_IMAGE }}
-      style={[styles.heroCard, styles.cardShadow]}
-      imageStyle={styles.heroImage}
-    >
+    <TouchableOpacity activeOpacity={0.9} onPress={onPress}>
+      <ImageBackground
+        source={{ uri: HERO_COURSE_IMAGE }}
+        style={[styles.heroCard, styles.cardShadow]}
+        imageStyle={styles.heroImage}
+      >
       <LinearGradient
         colors={['rgba(255,255,255,0.96)', 'rgba(255,255,255,0.82)', 'rgba(255,255,255,0.0)']}
         start={{ x: 0, y: 0 }}
@@ -594,7 +610,8 @@ function NextRoundCard({ round, loading }: { round: MyRound | null; loading: boo
           <Text style={styles.capacitySmall}>PLAYERS</Text>
         </View>
       </View>
-    </ImageBackground>
+      </ImageBackground>
+    </TouchableOpacity>
   );
 }
 
@@ -1143,8 +1160,47 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
+  // 🏆 Players hero card (new, matches Next Round hero's 3D look)
+  playersHero: {
+    marginHorizontal: 20,
+    marginBottom: 24,
+    backgroundColor: colors.surface,
+    borderRadius: 22,
+    padding: 18,
+  },
+  playersHeroHeader: {
+    marginBottom: 12,
+  },
+  playersHeroTitle: {
+    fontFamily: fonts.bold,
+    fontSize: 22,
+    color: colors.primary,
+    letterSpacing: -0.3,
+  },
+  playersHeroSubtitle: {
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 4,
+  },
+
+  // CTA pill inside the empty-state Post-a-Round hero card
+  heroCtaPill: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+  },
+  heroCtaText: {
+    color: colors.white,
+    fontFamily: fonts.semibold,
+    fontSize: 13,
+    letterSpacing: 0.2,
+  },
+
   filterSection: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 },
-  filterRow: { flexDirection: 'row', gap: 8 },
+  filterRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
   filterChip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -1163,7 +1219,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   filterChipTextActive: { color: colors.white },
-  clubFilterRow: { flexDirection: 'row', gap: 8 },
+  clubFilterRow: { flexDirection: 'row', gap: 8, marginBottom: 6 },
   clubFilterChip: {
     flex: 1,
     paddingHorizontal: 14,
@@ -1192,7 +1248,6 @@ const styles = StyleSheet.create({
   retryText: { color: colors.white, fontFamily: fonts.bold },
 
   playerList: {
-    paddingHorizontal: 20,
     gap: 12,
     marginTop: 12,
   },
