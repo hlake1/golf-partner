@@ -295,10 +295,24 @@ async function main() {
       on conflict (google_place_id) do nothing;
     `;
 
-    const { error } = await supabase.rpc('exec_sql', { sql }).catch((e) => ({ error: e }));
+    let error = null;
+    try {
+      const r = await supabase.rpc('exec_sql', { sql });
+      error = r.error;
+    } catch (e) {
+      error = e;
+    }
 
-    if (error && !String(error.message ?? error).includes('exec_sql')) {
-      console.log(`  ❌ Insert failed: ${error.message ?? error}`);
+    // Almost always we won't have an exec_sql RPC, so fall through to the
+    // per-row supabase-js path below.
+    const errMsg = error ? String(error.message ?? error) : '';
+    const isMissingRpc =
+      errMsg.includes('exec_sql') ||
+      errMsg.includes('function public.exec_sql') ||
+      errMsg.includes('Could not find the function');
+
+    if (error && !isMissingRpc) {
+      console.log(`  ❌ Insert failed: ${errMsg}`);
       continue;
     }
     if (error) {
