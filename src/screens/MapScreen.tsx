@@ -231,29 +231,44 @@ export default function MapScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
       {/* Search bar */}
-      <View style={styles.mapSearchWrap}>
-        <Text style={styles.mapSearchIcon}>🔍</Text>
-        <TextInput
-          style={styles.mapSearchInput}
-          placeholder={`Search ${clubs.length} clubs…`}
-          placeholderTextColor={colors.textMuted}
-          value={search}
-          onChangeText={setSearch}
-          onFocus={() => setSearchFocused(true)}
-          autoCorrect={false}
-          autoCapitalize="none"
-          returnKeyType="search"
-          clearButtonMode="while-editing"
-        />
-        {search.length > 0 && (
+      <View style={styles.mapSearchRow}>
+        <View style={[styles.mapSearchWrap, { flex: 1 }]}>
+          <Text style={styles.mapSearchIcon}>🔍</Text>
+          <TextInput
+            style={styles.mapSearchInput}
+            placeholder={`Search ${clubs.length} clubs…`}
+            placeholderTextColor={colors.textMuted}
+            value={search}
+            onChangeText={setSearch}
+            onFocus={() => setSearchFocused(true)}
+            autoCorrect={false}
+            autoCapitalize="none"
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+          />
+          {search.length > 0 && (
+            <TouchableOpacity
+              onPress={() => {
+                setSearch('');
+                Keyboard.dismiss();
+              }}
+              hitSlop={8}
+            >
+              <Text style={styles.mapSearchClear}>✕</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        {searchFocused && (
           <TouchableOpacity
+            style={styles.mapSearchCancel}
             onPress={() => {
               setSearch('');
+              setSearchFocused(false);
               Keyboard.dismiss();
             }}
-            hitSlop={8}
+            hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
           >
-            <Text style={styles.mapSearchClear}>✕</Text>
+            <Text style={styles.mapSearchCancelText}>Cancel</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -341,7 +356,16 @@ export default function MapScreen() {
             initialRegion={initialRegion}
             showsUserLocation={locStatus === 'granted'}
             showsMyLocationButton
-            onPress={() => setSelected(null)}
+            onPress={() => {
+              setSelected(null);
+              // Also dismiss the keyboard + close the search dropdown
+              // when the user taps the map — makes it easy to get back
+              // to the map without picking a club.
+              if (searchFocused) {
+                setSearchFocused(false);
+                Keyboard.dismiss();
+              }
+            }}
           >
             {clubs.map((c) => (
               <Marker
@@ -563,7 +587,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  mapSearchWrap: {
+  mapSearchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface,
@@ -572,6 +596,20 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     gap: 8,
+  },
+  mapSearchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  mapSearchCancel: {
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+  },
+  mapSearchCancelText: {
+    color: colors.primary,
+    fontSize: 15,
+    fontWeight: '600',
   },
   mapSearchIcon: {
     fontSize: 14,
