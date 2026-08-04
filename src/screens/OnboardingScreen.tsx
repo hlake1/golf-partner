@@ -11,6 +11,7 @@ import {
   Alert,
   Switch,
   Platform,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
@@ -51,6 +52,7 @@ export default function OnboardingScreen({ onDone }: Props) {
   const [clubs, setClubs] = useState<Club[]>([]);
   const [clubsLoading, setClubsLoading] = useState(false);
   const [clubFilter, setClubFilter] = useState('');
+  const [clubsListOpen, setClubsListOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -365,43 +367,105 @@ export default function OnboardingScreen({ onDone }: Props) {
               <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 24 }} />
             ) : (
               <>
-                <TextInput
-                  style={styles.input}
-                  value={clubFilter}
-                  onChangeText={setClubFilter}
-                  placeholder="Search clubs by name or county…"
-                  placeholderTextColor={colors.textMuted}
-                  autoCorrect={false}
-                  autoCapitalize="none"
-                  clearButtonMode="while-editing"
-                />
-                <View style={styles.clubList}>
-                  {filteredClubs.length === 0 && (
-                    <Text style={styles.hint}>No clubs match "{clubFilter}"</Text>
+                {/* Selected chips — so users can see what they've picked without
+                    scrolling through the whole list. */}
+                {selectedClubIds.size > 0 && (
+                  <View style={styles.chipRow}>
+                    {clubs
+                      .filter((c) => selectedClubIds.has(c.id))
+                      .map((c) => (
+                        <TouchableOpacity
+                          key={c.id}
+                          style={styles.chip}
+                          onPress={() => toggleClub(c.id)}
+                        >
+                          <Text style={styles.chipText}>{c.name}</Text>
+                          <Text style={styles.chipRemove}>✕</Text>
+                        </TouchableOpacity>
+                      ))}
+                  </View>
+                )}
+
+                {/* Search bar + Done button */}
+                <View style={styles.searchRow}>
+                  <TextInput
+                    style={[styles.input, { flex: 1 }]}
+                    value={clubFilter}
+                    onChangeText={setClubFilter}
+                    onFocus={() => setClubsListOpen(true)}
+                    placeholder="Search clubs by name or county…"
+                    placeholderTextColor={colors.textMuted}
+                    autoCorrect={false}
+                    autoCapitalize="none"
+                    returnKeyType="search"
+                    clearButtonMode="while-editing"
+                  />
+                  {(clubsListOpen || clubFilter.length > 0) && (
+                    <TouchableOpacity
+                      style={styles.doneButton}
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        if (clubFilter.trim() === '') setClubsListOpen(false);
+                      }}
+                    >
+                      <Text style={styles.doneButtonText}>Done</Text>
+                    </TouchableOpacity>
                   )}
-                  {filteredClubs.map((club) => {
-                    const active = selectedClubIds.has(club.id);
-                    return (
-                      <TouchableOpacity
-                        key={club.id}
-                        style={[styles.clubItem, active && styles.clubItemActive]}
-                        onPress={() => toggleClub(club.id)}
-                      >
-                        <View style={{ flex: 1 }}>
-                          <Text
-                            style={[styles.clubName, active && styles.clubNameActive]}
-                          >
-                            {club.name}
-                          </Text>
-                          {club.county && (
-                            <Text style={styles.clubCounty}>{club.county}</Text>
-                          )}
-                        </View>
-                        {active && <Text style={styles.checkmark}>✓</Text>}
-                      </TouchableOpacity>
-                    );
-                  })}
                 </View>
+
+                {/* Browse all trigger when list is collapsed */}
+                {clubFilter.trim() === '' && !clubsListOpen && (
+                  <TouchableOpacity
+                    onPress={() => setClubsListOpen(true)}
+                    style={styles.expandLink}
+                  >
+                    <Text style={styles.expandLinkText}>Browse all clubs ↓</Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Results list — only when searching or explicitly opened */}
+                {(clubFilter.trim() !== '' || clubsListOpen) && (
+                  <View style={styles.clubList}>
+                    {filteredClubs.length === 0 && (
+                      <Text style={styles.hint}>No clubs match "{clubFilter}"</Text>
+                    )}
+                    {filteredClubs.map((club) => {
+                      const active = selectedClubIds.has(club.id);
+                      return (
+                        <TouchableOpacity
+                          key={club.id}
+                          style={[styles.clubItem, active && styles.clubItemActive]}
+                          onPress={() => toggleClub(club.id)}
+                        >
+                          <View style={{ flex: 1 }}>
+                            <Text
+                              style={[styles.clubName, active && styles.clubNameActive]}
+                            >
+                              {club.name}
+                            </Text>
+                            {club.county && (
+                              <Text style={styles.clubCounty}>{club.county}</Text>
+                            )}
+                          </View>
+                          {active && <Text style={styles.checkmark}>✓</Text>}
+                        </TouchableOpacity>
+                      );
+                    })}
+
+                    {clubsListOpen && (
+                      <TouchableOpacity
+                        onPress={() => {
+                          setClubsListOpen(false);
+                          setClubFilter('');
+                          Keyboard.dismiss();
+                        }}
+                        style={styles.hideLink}
+                      >
+                        <Text style={styles.hideLinkText}>Hide list ↑</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
               </>
             )}
           </View>
@@ -666,6 +730,68 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: colors.primary,
     fontWeight: '800',
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 10,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: colors.surfaceSelected,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  chipText: {
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  chipRemove: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  doneButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+  },
+  doneButtonText: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  expandLink: {
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  expandLinkText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  hideLink: {
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  hideLinkText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: '600',
   },
   // Location
   locationButton: {
