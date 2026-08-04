@@ -54,7 +54,7 @@ export default function MapScreen() {
   const postRoundHere = (clubId: string) => {
     navigation.navigate('Calendar', { postRound: { clubId } });
   };
-  const [radius, setRadius] = useState<number>(profile?.search_radius_miles ?? 10);
+  const [radius, setRadius] = useState<number>(profile?.search_radius_miles ?? 25);
   const [liveOrigin, setLiveOrigin] = useState<{
     latitude: number;
     longitude: number;
@@ -63,9 +63,10 @@ export default function MapScreen() {
     'idle'
   );
   const [selected, setSelected] = useState<NearbyClub | null>(null);
-  // Default to "All" so users see every club we have in the DB from a
-  // zoomed-out perspective. They can still tap 5/10/25/50 mi to zoom in.
-  const [showAll, setShowAll] = useState(true);
+  // Default to a sensible local radius (25 mi) rather than "All" — most
+  // users aren't going to travel the country for a round. They can still
+  // tap "All" to see every club we have.
+  const [showAll, setShowAll] = useState(false);
   const [search, setSearch] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const mapRef = useRef<MapView>(null);

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -75,6 +75,16 @@ export default function CreateRoundScreen({
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
+
+  // Helper: set an error AND scroll the user to the top so they actually see it.
+  const showError = (msg: string) => {
+    setError(msg);
+    // Give React a tick to render, then scroll.
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+    });
+  };
 
   useEffect(() => {
     setClubsLoading(true);
@@ -99,11 +109,11 @@ export default function CreateRoundScreen({
   async function submit() {
     if (!user) return;
     if (!selectedClub) {
-      setError('Please pick a club.');
+      showError('Please pick a club.');
       return;
     }
     if (scheduledFor.getTime() < Date.now()) {
-      setError('Please pick a future date and time.');
+      showError('Please pick a future date and time.');
       return;
     }
 
@@ -147,7 +157,11 @@ export default function CreateRoundScreen({
         keyboardVerticalOffset={0}
       >
       <View style={[styles.header, { paddingTop: 12 + insets.top }]}>
-        <TouchableOpacity onPress={onCancel} hitSlop={12}>
+        <TouchableOpacity
+          onPress={onCancel}
+          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+          style={styles.cancelButton}
+        >
           <Text style={styles.cancelText} numberOfLines={1}>
             Cancel
           </Text>
@@ -157,10 +171,17 @@ export default function CreateRoundScreen({
       </View>
 
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
       >
+        {error && (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorBannerText}>⚠️ {error}</Text>
+          </View>
+        )}
+
         {/* Club picker */}
         <View style={styles.field}>
           <Text style={styles.label}>Golf club</Text>
@@ -208,34 +229,108 @@ export default function CreateRoundScreen({
         </View>
 
         {showDatePicker && (
-          <DateTimePicker
-            value={scheduledFor}
-            mode="date"
-            minimumDate={new Date()}
-            onChange={(_, d) => {
-              setShowDatePicker(Platform.OS === 'ios');
-              if (d) {
-                const next = new Date(scheduledFor);
-                next.setFullYear(d.getFullYear(), d.getMonth(), d.getDate());
-                setScheduledFor(next);
-              }
-            }}
-          />
+          Platform.OS === 'ios' ? (
+            <Modal
+              transparent
+              animationType="fade"
+              visible={showDatePicker}
+              onRequestClose={() => setShowDatePicker(false)}
+            >
+              <TouchableOpacity
+                style={styles.pickerBackdrop}
+                activeOpacity={1}
+                onPress={() => setShowDatePicker(false)}
+              >
+                <TouchableOpacity activeOpacity={1} style={styles.pickerSheet}>
+                  <View style={styles.pickerSheetHeader}>
+                    <Text style={styles.pickerSheetTitle}>Select date</Text>
+                    <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                      <Text style={styles.pickerSheetDone}>Done</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <DateTimePicker
+                    value={scheduledFor}
+                    mode="date"
+                    display="inline"
+                    minimumDate={new Date()}
+                    onChange={(_, d) => {
+                      if (d) {
+                        const next = new Date(scheduledFor);
+                        next.setFullYear(d.getFullYear(), d.getMonth(), d.getDate());
+                        setScheduledFor(next);
+                      }
+                    }}
+                  />
+                </TouchableOpacity>
+              </TouchableOpacity>
+            </Modal>
+          ) : (
+            <DateTimePicker
+              value={scheduledFor}
+              mode="date"
+              minimumDate={new Date()}
+              onChange={(_, d) => {
+                setShowDatePicker(false);
+                if (d) {
+                  const next = new Date(scheduledFor);
+                  next.setFullYear(d.getFullYear(), d.getMonth(), d.getDate());
+                  setScheduledFor(next);
+                }
+              }}
+            />
+          )
         )}
         {showTimePicker && (
-          <DateTimePicker
-            value={scheduledFor}
-            mode="time"
-            is24Hour
-            onChange={(_, d) => {
-              setShowTimePicker(Platform.OS === 'ios');
-              if (d) {
-                const next = new Date(scheduledFor);
-                next.setHours(d.getHours(), d.getMinutes(), 0, 0);
-                setScheduledFor(next);
-              }
-            }}
-          />
+          Platform.OS === 'ios' ? (
+            <Modal
+              transparent
+              animationType="fade"
+              visible={showTimePicker}
+              onRequestClose={() => setShowTimePicker(false)}
+            >
+              <TouchableOpacity
+                style={styles.pickerBackdrop}
+                activeOpacity={1}
+                onPress={() => setShowTimePicker(false)}
+              >
+                <TouchableOpacity activeOpacity={1} style={styles.pickerSheet}>
+                  <View style={styles.pickerSheetHeader}>
+                    <Text style={styles.pickerSheetTitle}>Select tee time</Text>
+                    <TouchableOpacity onPress={() => setShowTimePicker(false)}>
+                      <Text style={styles.pickerSheetDone}>Done</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <DateTimePicker
+                    value={scheduledFor}
+                    mode="time"
+                    display="spinner"
+                    is24Hour
+                    onChange={(_, d) => {
+                      if (d) {
+                        const next = new Date(scheduledFor);
+                        next.setHours(d.getHours(), d.getMinutes(), 0, 0);
+                        setScheduledFor(next);
+                      }
+                    }}
+                  />
+                </TouchableOpacity>
+              </TouchableOpacity>
+            </Modal>
+          ) : (
+            <DateTimePicker
+              value={scheduledFor}
+              mode="time"
+              is24Hour
+              onChange={(_, d) => {
+                setShowTimePicker(false);
+                if (d) {
+                  const next = new Date(scheduledFor);
+                  next.setHours(d.getHours(), d.getMinutes(), 0, 0);
+                  setScheduledFor(next);
+                }
+              }}
+            />
+          )
         )}
 
         {/* Players needed */}
@@ -289,7 +384,6 @@ export default function CreateRoundScreen({
           />
         </View>
 
-        {error && <Text style={styles.errorText}>⚠️ {error}</Text>}
       </ScrollView>
 
       <View style={styles.actionBar}>
@@ -309,9 +403,13 @@ export default function CreateRoundScreen({
 
       {/* Club selection modal */}
       <Modal visible={clubModal} animationType="slide" onRequestClose={() => setClubModal(false)}>
-        <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => setClubModal(false)} hitSlop={12}>
+        <SafeAreaView style={styles.container} edges={['left', 'right']}>
+          <View style={[styles.header, { paddingTop: 12 + insets.top }]}>
+            <TouchableOpacity
+              onPress={() => setClubModal(false)}
+              hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+              style={styles.cancelButton}
+            >
               <Text style={styles.cancelText} numberOfLines={1}>
                 Cancel
               </Text>
@@ -394,6 +492,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
     backgroundColor: colors.surface,
+  },
+  cancelButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+    zIndex: 10,
   },
   cancelText: { color: colors.primary, fontSize: 15, fontWeight: '600', minWidth: 60 },
   headerTitle: { fontSize: 17, fontWeight: '700', color: colors.text },
@@ -488,6 +591,50 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     marginBottom: 8,
+  },
+  errorBanner: {
+    backgroundColor: colors.danger + '15', // ~8% opacity tint
+    borderLeftWidth: 4,
+    borderLeftColor: colors.danger,
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginBottom: 16,
+  },
+  errorBannerText: {
+    color: colors.danger,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  pickerBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  pickerSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingBottom: 20,
+  },
+  pickerSheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  pickerSheetTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  pickerSheetDone: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.primary,
   },
   actionBar: {
     padding: 16,

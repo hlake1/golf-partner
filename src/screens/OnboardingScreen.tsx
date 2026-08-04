@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Image,
   Alert,
   Switch,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
@@ -49,9 +50,20 @@ export default function OnboardingScreen({ onDone }: Props) {
 
   const [clubs, setClubs] = useState<Club[]>([]);
   const [clubsLoading, setClubsLoading] = useState(false);
+  const [clubFilter, setClubFilter] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const filteredClubs = useMemo(() => {
+    const q = clubFilter.trim().toLowerCase();
+    if (!q) return clubs;
+    return clubs.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        (c.county ?? '').toLowerCase().includes(q)
+    );
+  }, [clubs, clubFilter]);
 
   const stepIndex = STEPS.indexOf(step);
   const isLastStep = step === 'location';
@@ -256,11 +268,11 @@ export default function OnboardingScreen({ onDone }: Props) {
                 style={styles.input}
                 value={handicap}
                 onChangeText={setHandicap}
-                placeholder="e.g. 14 or 22.5"
+                placeholder="e.g. 14 or 22.5 (use - for plus handicaps)"
                 placeholderTextColor={colors.textMuted}
-                keyboardType="decimal-pad"
+                keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'numeric'}
               />
-              <Text style={styles.hint}>Enter 54 if you're new to the game</Text>
+              <Text style={styles.hint}>Enter 54 if you're new to the game. Use a minus sign (e.g. -2) for plus handicaps.</Text>
             </View>
 
             <View style={styles.fieldGroup}>
@@ -352,30 +364,45 @@ export default function OnboardingScreen({ onDone }: Props) {
             {clubsLoading ? (
               <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 24 }} />
             ) : (
-              <View style={styles.clubList}>
-                {clubs.map((club) => {
-                  const active = selectedClubIds.has(club.id);
-                  return (
-                    <TouchableOpacity
-                      key={club.id}
-                      style={[styles.clubItem, active && styles.clubItemActive]}
-                      onPress={() => toggleClub(club.id)}
-                    >
-                      <View style={{ flex: 1 }}>
-                        <Text
-                          style={[styles.clubName, active && styles.clubNameActive]}
-                        >
-                          {club.name}
-                        </Text>
-                        {club.county && (
-                          <Text style={styles.clubCounty}>{club.county}</Text>
-                        )}
-                      </View>
-                      {active && <Text style={styles.checkmark}>✓</Text>}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+              <>
+                <TextInput
+                  style={styles.input}
+                  value={clubFilter}
+                  onChangeText={setClubFilter}
+                  placeholder="Search clubs by name or county…"
+                  placeholderTextColor={colors.textMuted}
+                  autoCorrect={false}
+                  autoCapitalize="none"
+                  clearButtonMode="while-editing"
+                />
+                <View style={styles.clubList}>
+                  {filteredClubs.length === 0 && (
+                    <Text style={styles.hint}>No clubs match "{clubFilter}"</Text>
+                  )}
+                  {filteredClubs.map((club) => {
+                    const active = selectedClubIds.has(club.id);
+                    return (
+                      <TouchableOpacity
+                        key={club.id}
+                        style={[styles.clubItem, active && styles.clubItemActive]}
+                        onPress={() => toggleClub(club.id)}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <Text
+                            style={[styles.clubName, active && styles.clubNameActive]}
+                          >
+                            {club.name}
+                          </Text>
+                          {club.county && (
+                            <Text style={styles.clubCounty}>{club.county}</Text>
+                          )}
+                        </View>
+                        {active && <Text style={styles.checkmark}>✓</Text>}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </>
             )}
           </View>
         )}
