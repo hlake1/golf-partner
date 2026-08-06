@@ -374,32 +374,54 @@ export default function MapScreen() {
               }
             }}
           >
-            {clubs.map((c) => (
-              <Marker
-                key={c.id}
-                coordinate={{ latitude: c.latitude, longitude: c.longitude }}
-                title={c.name}
-                description={
-                  c.is_scramble_partner
-                    ? `✓ Scramble Partner · ${c.distance_miles} mi away`
-                    : `${c.distance_miles} mi away`
-                }
-                // Scramble Partner clubs get the sage accent pin so they
-                // stand out on the map. Everyone else keeps the navy pin.
-                pinColor={c.is_scramble_partner ? colors.accent : colors.primary}
-                // Big perf win when there are many markers: tell RN Maps that
-                // the marker view never changes after mount, so it stops
-                // re-rendering on every pan/zoom. Trade-off: any dynamic
-                // marker content (custom views) won't update, but we're just
-                // using the default pin so this is fine.
-                tracksViewChanges={false}
-                onPress={(e) => {
-                  // Stop the map's onPress (which clears selection) from firing.
-                  e.stopPropagation?.();
-                  setSelected(c);
-                }}
-              />
-            ))}
+            {clubs.map((c) =>
+              c.is_scramble_partner ? (
+                // Scramble Partner clubs render a larger, branded marker
+                // with the Scramble logo. Uses `zIndex` so partners always
+                // sit on top of regular pins when they cluster.
+                <Marker
+                  key={c.id}
+                  coordinate={{ latitude: c.latitude, longitude: c.longitude }}
+                  title={c.name}
+                  description={`✓ Scramble Partner · ${c.distance_miles} mi away`}
+                  tracksViewChanges={false}
+                  zIndex={10}
+                  anchor={{ x: 0.5, y: 1 }}
+                  onPress={(e) => {
+                    e.stopPropagation?.();
+                    setSelected(c);
+                  }}
+                >
+                  <View style={styles.partnerMarker}>
+                    <View style={styles.partnerMarkerBubble}>
+                      <Image
+                        source={require('../../assets/logo.png')}
+                        style={styles.partnerMarkerLogo}
+                        resizeMode="contain"
+                      />
+                    </View>
+                    <View style={styles.partnerMarkerTail} />
+                  </View>
+                </Marker>
+              ) : (
+                <Marker
+                  key={c.id}
+                  coordinate={{ latitude: c.latitude, longitude: c.longitude }}
+                  title={c.name}
+                  description={`${c.distance_miles} mi away`}
+                  pinColor={colors.primary}
+                  // Big perf win when there are many markers: tell RN Maps that
+                  // the marker view never changes after mount, so it stops
+                  // re-rendering on every pan/zoom.
+                  tracksViewChanges={false}
+                  onPress={(e) => {
+                    // Stop the map's onPress (which clears selection) from firing.
+                    e.stopPropagation?.();
+                    setSelected(c);
+                  }}
+                />
+              )
+            )}
           </MapView>
         ) : (
           <View style={styles.center}>
@@ -945,6 +967,43 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.3,
+  },
+  // Custom marker for Scramble Partner clubs on the map. A rounded
+  // white bubble with the Scramble logo + a small pointer at the bottom
+  // so it reads as a pin. Roughly 2× the size of the default map pin.
+  partnerMarker: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  partnerMarkerBubble: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: colors.white,
+    borderWidth: 3,
+    borderColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 5,
+  },
+  partnerMarkerLogo: {
+    width: 38,
+    height: 38,
+  },
+  partnerMarkerTail: {
+    width: 0,
+    height: 0,
+    marginTop: -2,
+    borderLeftWidth: 7,
+    borderRightWidth: 7,
+    borderTopWidth: 10,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: colors.accent,
   },
   cardBtn: {
     backgroundColor: colors.primary,

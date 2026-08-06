@@ -44,6 +44,12 @@ npx qrcode-terminal "exp://u.expo.dev/710082a2-850d-4abe-b583-301e7e398c6d?chann
 
 **Auth:** Robot token `Oliver-Openclaw` (Admin role on `golf-partner` account) — set as `EXPO_TOKEN` env var when running `eas`.
 
+**Token location (Wed 2026-08-06):** Stored in `.env.local` (git-ignored, chmod 600). Load with:
+```bash
+set -a; source .env.local; set +a
+```
+Do NOT paste the token in chat or ask Herbie for it again unless the file is missing.
+
 **OOM gotcha:** Container has 4GB cgroup limit. `eas update` without `--platform` flag builds BOTH iOS and Android bundles and hits OOM during asset processing. Fix: push one platform at a time with `--platform ios` or `--platform android`, and set `NODE_OPTIONS="--max-old-space-size=3072"`.
 
 **Thread/PID limit gotcha (Mon 2026-08-03):** Container has `pids.max = 512`. If the OpenClaw Chromium browser is running with lots of open tabs/renderers, it can eat 250+ threads, leaving eas-cli unable to `pthread_create` and aborting with just `Aborted` (exit 134) and no other output. Symptom: even `eas --version` aborts. Fix: `pkill -TERM -f 'chromium.*openclaw'` to free the thread budget, then eas works normally. The browser can be restarted afterwards via the `browser` tool.
