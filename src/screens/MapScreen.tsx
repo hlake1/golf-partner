@@ -19,6 +19,9 @@ import MapView, { Marker, Region, PROVIDER_DEFAULT } from 'react-native-maps';
 import { colors } from '../theme/colors';
 import { useProfile } from '../hooks/useProfile';
 import { useNearbyClubs, NearbyClub } from '../hooks/useNearbyClubs';
+import ClubProfileScreen from './ClubProfileScreen';
+import ClubPartnerApplyScreen from './ClubPartnerApplyScreen';
+import ClubManageScreen from './ClubManageScreen';
 
 // Simple radius options that match the rest of the app (Home screen uses similar).
 // 'all' fetches every club by using a very large radius (covers the whole planet).
@@ -63,6 +66,10 @@ export default function MapScreen() {
     'idle'
   );
   const [selected, setSelected] = useState<NearbyClub | null>(null);
+  // Full-screen club profile / apply / manage flows.
+  const [profileClubId, setProfileClubId] = useState<string | null>(null);
+  const [applyClubId, setApplyClubId] = useState<string | null>(null);
+  const [manageClubId, setManageClubId] = useState<string | null>(null);
   // Default to a sensible local radius (25 mi) rather than "All" — most
   // users aren't going to travel the country for a round. They can still
   // tap "All" to see every club we have.
@@ -372,8 +379,14 @@ export default function MapScreen() {
                 key={c.id}
                 coordinate={{ latitude: c.latitude, longitude: c.longitude }}
                 title={c.name}
-                description={`${c.distance_miles} mi away`}
-                pinColor={colors.primary}
+                description={
+                  c.is_scramble_partner
+                    ? `✓ Scramble Partner · ${c.distance_miles} mi away`
+                    : `${c.distance_miles} mi away`
+                }
+                // Scramble Partner clubs get the sage accent pin so they
+                // stand out on the map. Everyone else keeps the navy pin.
+                pinColor={c.is_scramble_partner ? colors.accent : colors.primary}
                 // Big perf win when there are many markers: tell RN Maps that
                 // the marker view never changes after mount, so it stops
                 // re-rendering on every pan/zoom. Trade-off: any dynamic
@@ -478,17 +491,20 @@ export default function MapScreen() {
                 {selected.address}
               </Text>
             )}
+            {selected.is_scramble_partner && (
+              <View style={styles.partnerBadge}>
+                <Text style={styles.partnerBadgeText}>✓ Scramble Partner</Text>
+              </View>
+            )}
             <View style={styles.cardBtnRow}>
-              {selected.website && (
-                <TouchableOpacity
-                  style={[styles.cardBtn, styles.cardBtnSecondary]}
-                  onPress={() => openWebsite(selected.website!)}
-                >
-                  <Text style={[styles.cardBtnText, styles.cardBtnSecondaryText]}>
-                    Visit website
-                  </Text>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity
+                style={[styles.cardBtn, styles.cardBtnSecondary]}
+                onPress={() => setProfileClubId(selected.id)}
+              >
+                <Text style={[styles.cardBtnText, styles.cardBtnSecondaryText]}>
+                  View profile
+                </Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.cardBtn}
                 onPress={() => postRoundHere(selected.id)}
@@ -499,6 +515,36 @@ export default function MapScreen() {
           </View>
         )}
       </View>
+
+      {/* Full-screen club profile modal */}
+      <ClubProfileScreen
+        clubId={profileClubId}
+        onClose={() => setProfileClubId(null)}
+        onPostRound={(id) => {
+          setProfileClubId(null);
+          postRoundHere(id);
+        }}
+        onApplyToManage={(id) => {
+          setProfileClubId(null);
+          setApplyClubId(id);
+        }}
+        onManageClub={(id) => {
+          setProfileClubId(null);
+          setManageClubId(id);
+        }}
+      />
+
+      {/* Apply to manage a club (Scramble Partner application) */}
+      <ClubPartnerApplyScreen
+        clubId={applyClubId}
+        onClose={() => setApplyClubId(null)}
+      />
+
+      {/* Manage your partner club */}
+      <ClubManageScreen
+        clubId={manageClubId}
+        onClose={() => setManageClubId(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -885,6 +931,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     flexWrap: 'wrap',
+  },
+  partnerBadge: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
+    backgroundColor: colors.accent,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  partnerBadgeText: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   cardBtn: {
     backgroundColor: colors.primary,

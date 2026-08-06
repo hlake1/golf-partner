@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
+export type PartnerTier = 'starter' | 'partner' | 'premium';
+
 export interface NearbyClub {
   id: string;
   name: string;
@@ -13,6 +15,10 @@ export interface NearbyClub {
   rating: number | null;
   rating_count: number | null;
   photo_url: string | null;
+  // Scramble Partner Programme (migration 0016)
+  is_scramble_partner: boolean;
+  partner_tier: PartnerTier | null;
+  partner_hero_photo: string | null;
 }
 
 interface Options {
@@ -90,6 +96,9 @@ export function useNearbyClubs({ radiusMiles, origin }: Options) {
           ? Number(c.rating_count)
           : null,
       photo_url: c.photo_url ?? null,
+      is_scramble_partner: Boolean(c.is_scramble_partner),
+      partner_tier: (c.partner_tier as PartnerTier | null) ?? null,
+      partner_hero_photo: c.partner_hero_photo ?? null,
     }));
 
     setClubs(mapped);
