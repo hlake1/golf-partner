@@ -399,7 +399,7 @@ export default function HomeScreen() {
         <View style={styles.statsRow}>
           <View style={[styles.statCard, styles.cardShadow]}>
             <View style={styles.statIconWrap}>
-              <IconTrendUp size={20} color={colors.primary} />
+              <AppIcon name="stats" size={28} />
             </View>
             <Text style={styles.statCaption}>Handicap Index</Text>
             <View style={styles.statValueRow}>
@@ -412,7 +412,7 @@ export default function HomeScreen() {
 
           <View style={[styles.statCard, styles.cardShadow]}>
             <View style={styles.statIconWrap}>
-              <IconFlag size={18} color={colors.primary} />
+              <AppIcon name="history" size={28} />
             </View>
             <Text style={styles.statCaption}>Recent Activity</Text>
             <View style={styles.statValueRow}>

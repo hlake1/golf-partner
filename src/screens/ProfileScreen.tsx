@@ -265,9 +265,16 @@ export default function ProfileScreen() {
                   )}
                   <View style={{ flex: 1 }}>
                     <Text style={styles.friendName}>{f.full_name}</Text>
-                    <Text style={styles.friendMeta}>
-                      {f.origin === 'round_accept' ? '⛳ Met via a round' : '👋 Friend'}
-                    </Text>
+                    {f.origin === 'round_accept' ? (
+                      <View style={styles.friendMetaRow}>
+                        <AppIcon name="pin" size={14} />
+                        <Text style={styles.friendMeta}>Met via a</Text>
+                        <AppIcon name="flag-green" size={14} />
+                        <Text style={styles.friendMeta}>round</Text>
+                      </View>
+                    ) : (
+                      <Text style={styles.friendMeta}>👋 Friend</Text>
+                    )}
                   </View>
                   <Text style={styles.chevron}>›</Text>
                 </TouchableOpacity>
@@ -308,7 +315,10 @@ export default function ProfileScreen() {
         <Section title="Occupation">
           {profile.occupation ? (
             <>
-              <Text style={styles.plainText}>💼 {profile.occupation}</Text>
+              <View style={styles.occupationRow}>
+                <AppIcon name="briefcase" size={20} />
+                <Text style={styles.plainText}>{profile.occupation}</Text>
+              </View>
               <Text style={styles.helperText}>
                 Helps with networking with fellow golfers
               </Text>
@@ -346,7 +356,7 @@ export default function ProfileScreen() {
             onPress={() => setLegalOpen('privacy')}
           />
           <LegalRow
-            iconName="briefcase"
+            iconName="scorecard"
             label="Terms of Service"
             onPress={() => setLegalOpen('terms')}
           />
@@ -562,6 +572,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.text,
   },
+  occupationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   bioText: {
     fontSize: 14,
     lineHeight: 20,
@@ -689,6 +704,12 @@ const styles = StyleSheet.create({
   friendMeta: {
     fontSize: 12,
     color: colors.textSecondary,
+    marginTop: 2,
+  },
+  friendMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     marginTop: 2,
   },
   chevron: {
