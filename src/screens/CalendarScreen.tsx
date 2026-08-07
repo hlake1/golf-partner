@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { colors } from '../theme/colors';
 import { useRounds, type RoundListItem } from '../hooks/useRounds';
+import AppIcon from '../components/AppIcon';
 import { usePendingRequests, type PendingRequest } from '../hooks/usePendingRequests';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -269,7 +270,7 @@ export default function CalendarScreen() {
             <Text style={styles.sectionTitle}>Open rounds</Text>
             {otherRounds.length === 0 ? (
               <View style={styles.emptyState}>
-                <Text style={styles.emptyEmoji}>⛳</Text>
+                <AppIcon name="flag-green" size={64} style={styles.emptyIcon} />
                 <Text style={styles.emptyTitle}>No open rounds nearby</Text>
                 <Text style={styles.emptyText}>
                   Be the first — post a round and get players to join you.
@@ -558,6 +559,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
   },
   emptyEmoji: { fontSize: 48, marginBottom: 12 },
+  emptyIcon: { marginBottom: 12 },
   emptyTitle: { fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 4 },
   emptyText: { fontSize: 13, color: colors.textSecondary, textAlign: 'center', lineHeight: 20 },
   roundCard: {

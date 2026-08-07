@@ -17,6 +17,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { colors } from '../theme/colors';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import AppIcon from '../components/AppIcon';
 
 interface Club {
   id: string;
@@ -214,7 +215,10 @@ export default function CreateRoundScreen({
               style={styles.picker}
               onPress={() => setShowDatePicker(true)}
             >
-              <Text style={styles.pickerText}>📅 {dateLabel}</Text>
+              <View style={styles.pickerRow}>
+                <AppIcon name="calendar" size={18} />
+                <Text style={styles.pickerText}>{dateLabel}</Text>
+              </View>
             </TouchableOpacity>
           </View>
           <View style={[styles.field, { flex: 1 }]}>
@@ -420,7 +424,7 @@ export default function CreateRoundScreen({
 
           {/* Search bar */}
           <View style={styles.searchWrap}>
-            <Text style={styles.searchIcon}>🔍</Text>
+            <AppIcon name="search" size={16} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
               placeholder="Search clubs…"
@@ -512,8 +516,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   searchIcon: {
-    fontSize: 14,
-    color: colors.textMuted,
+    marginRight: 2,
+  },
+  pickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   searchInput: {
     flex: 1,

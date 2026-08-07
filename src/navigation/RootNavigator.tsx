@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text, View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/typography';
 import { useNotifications } from '../hooks/useNotifications';
@@ -12,6 +12,7 @@ import {
   ChatTabIcon,
   ProfileTabIcon,
 } from '../components/TabIcons';
+import AppIcon from '../components/AppIcon';
 
 import HomeScreen from '../screens/HomeScreen';
 import MapScreen from '../screens/MapScreen';
@@ -27,7 +28,7 @@ function NotificationBell({ onPress }: { onPress: () => void }) {
   const { unreadCount } = useNotifications();
   return (
     <TouchableOpacity onPress={onPress} style={styles.bellWrap} hitSlop={10}>
-      <Text style={styles.bell}>🔔</Text>
+      <AppIcon name="bell" size={26} />
       {unreadCount > 0 && (
         <View style={styles.badge}>
           <Text style={styles.badgeText}>
@@ -97,7 +98,7 @@ export default function RootNavigator() {
           component={HomeScreen}
           options={{
             title: 'Find Players',
-            tabBarIcon: ({ color }) => <HomeTabIcon color={color} />,
+            tabBarIcon: ({ color, focused }) => <HomeTabIcon color={color} focused={focused} />,
           }}
         />
         <Tab.Screen
@@ -105,7 +106,7 @@ export default function RootNavigator() {
           component={MapScreen}
           options={{
             title: 'Courses',
-            tabBarIcon: ({ color }) => <MapTabIcon color={color} />,
+            tabBarIcon: ({ color, focused }) => <MapTabIcon color={color} focused={focused} />,
           }}
         />
         <Tab.Screen
@@ -113,7 +114,7 @@ export default function RootNavigator() {
           component={CalendarScreen}
           options={{
             title: 'Plan a Round',
-            tabBarIcon: ({ color }) => <CalendarTabIcon color={color} />,
+            tabBarIcon: ({ color, focused }) => <CalendarTabIcon color={color} focused={focused} />,
           }}
         />
         <Tab.Screen
@@ -121,7 +122,7 @@ export default function RootNavigator() {
           component={ChatListScreen}
           options={{
             title: 'Messages',
-            tabBarIcon: ({ color }) => <ChatTabIcon color={color} />,
+            tabBarIcon: ({ color, focused }) => <ChatTabIcon color={color} focused={focused} />,
           }}
         />
         <Tab.Screen
@@ -129,7 +130,7 @@ export default function RootNavigator() {
           component={ProfileScreen}
           options={{
             title: 'My Profile',
-            tabBarIcon: ({ color }) => <ProfileTabIcon color={color} />,
+            tabBarIcon: ({ color, focused }) => <ProfileTabIcon color={color} focused={focused} />,
           }}
         />
       </Tab.Navigator>
@@ -142,9 +143,6 @@ const styles = StyleSheet.create({
     marginRight: 14,
     paddingHorizontal: 4,
     paddingVertical: 4,
-  },
-  bell: {
-    fontSize: 22,
   },
   badge: {
     position: 'absolute',

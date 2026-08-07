@@ -33,6 +33,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import ScrambleMark from '../components/ScrambleMark';
 import PlayerProfileScreen from './PlayerProfileScreen';
+import AppIcon from '../components/AppIcon';
 
 // ---------- Constants ----------
 const HERO_COURSE_IMAGE =
@@ -964,7 +965,7 @@ function PlayersListScreen({
             <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
           ) : players.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyEmoji}>⛳</Text>
+              <AppIcon name="find-players" size={72} style={styles.emptyIcon} />
               <Text style={styles.emptyTitle}>No players nearby</Text>
               <Text style={styles.emptyText}>
                 {clubFilter
@@ -1579,6 +1580,7 @@ const styles = StyleSheet.create({
 
   emptyState: { alignItems: 'center', padding: 40, marginTop: 12 },
   emptyEmoji: { fontSize: 56, marginBottom: 12 },
+  emptyIcon: { marginBottom: 12 },
   emptyTitle: { fontFamily: fonts.bold, fontSize: 17, color: colors.text, marginBottom: 4 },
   emptyText: { fontFamily: fonts.regular, fontSize: 13, color: colors.textSecondary, textAlign: 'center', lineHeight: 20 },
   errorState: { alignItems: 'center', padding: 40, marginTop: 12 },

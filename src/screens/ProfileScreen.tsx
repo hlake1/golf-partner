@@ -23,6 +23,7 @@ import ChatScreen from './ChatScreen';
 import LegalScreen from './LegalScreen';
 import { PRIVACY_POLICY } from '../legal/privacyPolicy';
 import { TERMS_OF_SERVICE } from '../legal/termsOfService';
+import AppIcon, { AppIconName } from '../components/AppIcon';
 import { COOKIES_POLICY } from '../legal/cookiesPolicy';
 import { COMMUNITY_GUIDELINES } from '../legal/communityGuidelines';
 
@@ -216,9 +217,12 @@ export default function ProfileScreen() {
             {photoUpdating ? (
               <ActivityIndicator size="small" color={colors.primary} />
             ) : (
-              <Text style={styles.editPhotoText}>
-                📷 {profile.photo_url ? 'Change Photo' : 'Add Photo'}
-              </Text>
+              <View style={styles.editPhotoRow}>
+                <AppIcon name="camera" size={16} />
+                <Text style={styles.editPhotoText}>
+                  {profile.photo_url ? 'Change Photo' : 'Add Photo'}
+                </Text>
+              </View>
             )}
           </TouchableOpacity>
         </View>
@@ -337,22 +341,22 @@ export default function ProfileScreen() {
         {/* Legal & Privacy */}
         <Section title="Legal & Privacy">
           <LegalRow
-            icon="🔒"
+            iconName="lock"
             label="Privacy Policy"
             onPress={() => setLegalOpen('privacy')}
           />
           <LegalRow
-            icon="📜"
+            iconName="briefcase"
             label="Terms of Service"
             onPress={() => setLegalOpen('terms')}
           />
           <LegalRow
-            icon="🍪"
+            iconName="cookie"
             label="Cookies & Tracking"
             onPress={() => setLegalOpen('cookies')}
           />
           <LegalRow
-            icon="🤝"
+            iconName="handshake"
             label="Community Guidelines"
             onPress={() => setLegalOpen('community')}
             isLast
@@ -399,12 +403,12 @@ function PreferenceRow({ label, value }: { label: string; value: string }) {
 }
 
 function LegalRow({
-  icon,
+  iconName,
   label,
   onPress,
   isLast,
 }: {
-  icon: string;
+  iconName: AppIconName;
   label: string;
   onPress: () => void;
   isLast?: boolean;
@@ -415,7 +419,7 @@ function LegalRow({
       onPress={onPress}
       activeOpacity={0.6}
     >
-      <Text style={styles.legalIcon}>{icon}</Text>
+      <AppIcon name={iconName} size={22} style={styles.legalIconImg} />
       <Text style={styles.legalLabel}>{label}</Text>
       <Text style={styles.legalChevron}>›</Text>
     </TouchableOpacity>
@@ -481,6 +485,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: colors.primary,
+  },
+  editPhotoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   statsRow: {
     flexDirection: 'row',
@@ -590,6 +599,9 @@ const styles = StyleSheet.create({
     marginRight: 12,
     width: 26,
     textAlign: 'center',
+  },
+  legalIconImg: {
+    marginRight: 12,
   },
   legalLabel: {
     flex: 1,

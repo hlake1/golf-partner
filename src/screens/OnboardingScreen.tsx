@@ -21,6 +21,7 @@ import { supabase } from '../lib/supabase';
 import { uploadProfilePhoto } from '../lib/uploadProfilePhoto';
 import { useAuth } from '../contexts/AuthContext';
 import type { PlayingStyle } from '../hooks/useProfile';
+import AppIcon from '../components/AppIcon';
 
 interface Club {
   id: string;
@@ -243,7 +244,7 @@ export default function OnboardingScreen({ onDone }: Props) {
                 <Image source={{ uri: photoUri }} style={styles.photoPreview} />
               ) : (
                 <View style={styles.photoPlaceholder}>
-                  <Text style={styles.photoPlaceholderEmoji}>📷</Text>
+                  <AppIcon name="camera" size={48} style={styles.photoPlaceholderIcon} />
                   <Text style={styles.photoPlaceholderText}>Tap to add</Text>
                 </View>
               )}
@@ -307,7 +308,7 @@ export default function OnboardingScreen({ onDone }: Props) {
                 ]}
                 onPress={() => setPlayingStyle('competitive')}
               >
-                <Text style={styles.choiceEmoji}>🏆</Text>
+                <AppIcon name="trophy" size={44} style={styles.choiceIcon} />
                 <Text style={styles.choiceLabel}>Competitive</Text>
                 <Text style={styles.choiceSubtext}>
                   Score matters, playing to improve
@@ -636,6 +637,9 @@ const styles = StyleSheet.create({
     fontSize: 40,
     marginBottom: 4,
   },
+  photoPlaceholderIcon: {
+    marginBottom: 6,
+  },
   photoPlaceholderText: {
     fontSize: 14,
     color: colors.textSecondary,
@@ -675,6 +679,9 @@ const styles = StyleSheet.create({
   choiceEmoji: {
     fontSize: 32,
     marginBottom: 8,
+  },
+  choiceIcon: {
+    marginBottom: 6,
   },
   choiceLabel: {
     fontSize: 15,

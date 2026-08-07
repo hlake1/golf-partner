@@ -10,6 +10,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import type { MyRound } from '../hooks/useMyRounds';
+import AppIcon from '../components/AppIcon';
 
 interface Props {
   round: MyRound;
@@ -58,8 +59,13 @@ export default function RoundDetailScreen({ round, onBack }: Props) {
             round.role === 'host' ? styles.roleBadgeHost : styles.roleBadgeAccepted,
           ]}
         >
+          {round.role === 'host' ? (
+            <AppIcon name="trophy" size={16} style={{ marginRight: 6 }} />
+          ) : (
+            <AppIcon name="scorecard" size={16} style={{ marginRight: 6 }} />
+          )}
           <Text style={styles.roleBadgeText}>
-            {round.role === 'host' ? "🏆 You're hosting" : "✅ You're playing"}
+            {round.role === 'host' ? "You're hosting" : "You're playing"}
           </Text>
         </View>
 
@@ -178,6 +184,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     marginBottom: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   roleBadgeHost: { backgroundColor: '#FEF3C7' },
   roleBadgeAccepted: { backgroundColor: '#D1FAE5' },

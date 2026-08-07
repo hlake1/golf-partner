@@ -17,6 +17,7 @@ import { supabase } from '../lib/supabase';
 import { useFriends, type Friend, type FriendRequest } from '../hooks/useFriends';
 import ChatScreen from './ChatScreen';
 import PlayerProfileScreen from './PlayerProfileScreen';
+import AppIcon from '../components/AppIcon';
 
 interface ChatSummary {
   conversation_id: string;
@@ -182,7 +183,7 @@ export default function ChatListScreen() {
           <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
         ) : totallyEmpty ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyEmoji}>💬</Text>
+            <AppIcon name="chat" size={72} style={styles.emptyIcon} />
             <Text style={styles.emptyTitle}>No messages yet</Text>
             <Text style={styles.emptyText}>
               Find golfers near you on the Home tab. Once you connect, chats
@@ -387,6 +388,7 @@ const styles = StyleSheet.create({
     marginTop: 30,
   },
   emptyEmoji: { fontSize: 60, marginBottom: 12 },
+  emptyIcon: { marginBottom: 12 },
   emptyTitle: { fontSize: 17, fontWeight: '700', color: colors.text, marginBottom: 4 },
   emptyText: {
     fontSize: 14,

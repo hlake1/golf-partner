@@ -22,6 +22,7 @@ import { useNearbyClubs, NearbyClub } from '../hooks/useNearbyClubs';
 import ClubProfileScreen from './ClubProfileScreen';
 import ClubPartnerApplyScreen from './ClubPartnerApplyScreen';
 import ClubManageScreen from './ClubManageScreen';
+import AppIcon from '../components/AppIcon';
 
 // Simple radius options that match the rest of the app (Home screen uses similar).
 // 'all' fetches every club by using a very large radius (covers the whole planet).
@@ -240,7 +241,7 @@ export default function MapScreen() {
       {/* Search bar */}
       <View style={styles.mapSearchRow}>
         <View style={[styles.mapSearchWrap, { flex: 1 }]}>
-          <Text style={styles.mapSearchIcon}>🔍</Text>
+          <AppIcon name="search" size={18} style={styles.mapSearchIcon} />
           <TextInput
             style={styles.mapSearchInput}
             placeholder={`Search ${clubs.length} clubs…`}
@@ -680,8 +681,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   mapSearchIcon: {
-    fontSize: 14,
-    color: colors.textMuted,
+    marginRight: 2,
   },
   mapSearchInput: {
     flex: 1,
