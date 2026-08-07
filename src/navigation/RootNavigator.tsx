@@ -74,19 +74,36 @@ export default function RootNavigator() {
           },
           tabBarStyle: {
             backgroundColor: colors.surface,
-            borderTopColor: colors.border,
+            borderTopColor: 'transparent',
+            borderTopWidth: 0,
             height: 84,
             paddingTop: 8,
             paddingBottom: 24,
+            // Match the header's soft depth so the tab bar sits above content
+            // on an all-white page.
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: 0.06,
+            shadowRadius: 4,
+            elevation: 8,
           },
           headerStyle: {
-            backgroundColor: colors.primary,
+            backgroundColor: colors.surface,
+            // Subtle depth via shadow (iOS) + elevation (Android),
+            // replacing the previous solid-navy top bar.
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.06,
+            shadowRadius: 4,
+            elevation: 3,
+            borderBottomWidth: 0,
           },
-          headerTintColor: colors.white,
+          headerTintColor: colors.primary,
           headerTitleStyle: {
             fontFamily: fonts.bold,
             fontSize: 18,
             letterSpacing: -0.2,
+            color: colors.primary,
           },
           headerRight: () => (
             <NotificationBell onPress={() => setNotificationsOpen(true)} />
@@ -153,7 +170,7 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     backgroundColor: colors.accent,
     borderWidth: 1.5,
-    borderColor: colors.primary,
+    borderColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 4,

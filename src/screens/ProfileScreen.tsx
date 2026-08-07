@@ -419,7 +419,7 @@ function LegalRow({
       onPress={onPress}
       activeOpacity={0.6}
     >
-      <AppIcon name={iconName} size={22} style={styles.legalIconImg} />
+      <AppIcon name={iconName} size={30} style={styles.legalIconImg} />
       <Text style={styles.legalLabel}>{label}</Text>
       <Text style={styles.legalChevron}>›</Text>
     </TouchableOpacity>
@@ -443,6 +443,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 24,
     backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
   },
   avatar: {
     width: 100,
@@ -533,6 +535,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 14,
     gap: 8,
+    // Depth on a white page comes from a soft shadow, not a tinted bg.
+    shadowColor: '#0F1622',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
   clubChipsRow: {
     flexDirection: 'row',
@@ -587,7 +595,7 @@ const styles = StyleSheet.create({
   legalRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
@@ -601,7 +609,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   legalIconImg: {
-    marginRight: 12,
+    marginRight: 14,
   },
   legalLabel: {
     flex: 1,

@@ -95,7 +95,7 @@ export default function App() {
     // Very brief flash before fonts are ready; use the splash-style loader.
     return (
       <SafeAreaProvider>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <Splash />
       </SafeAreaProvider>
     );
@@ -103,7 +103,7 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <AuthProvider>
         <AppInner />
       </AuthProvider>

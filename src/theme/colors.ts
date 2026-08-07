@@ -18,9 +18,11 @@ export const colors = {
   accentLight: '#C5CEBF', // Softer sage for hover / subtle highlights
 
   // Background & surfaces
-  background: '#F6F8FB', // Off-white with a hint of mist
+  // Gabriel's direction (2026-08-07): whole page is white; depth comes from
+  // shadows on cards, not tinted background zones.
+  background: '#FFFFFF',
   surface: '#FFFFFF',
-  surfaceElevated: '#F1F4F8', // Slightly lifted surface
+  surfaceElevated: '#F5F7FA', // Slightly lifted surface (subtle, off-white)
   surfaceSelected: '#DCE5EF', // Selected chip / filter background (mist)
 
   // Text
